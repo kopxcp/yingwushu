@@ -1,0 +1,2396 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>比分记录</title>
+    <link rel="stylesheet" href="../css/all.min.css">
+    <script src="../js/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', 'Microsoft YaHei', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0a0a0a, #1a1a1a, #2a2a2a);
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            transition: all 0.5s ease;
+        }
+
+        /* 当前时间显示 */
+        .current-time {
+            position: fixed;
+            top: 20px;
+            right: 40px;
+            background: linear-gradient(145deg, #222222, #111111);
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #ffcc00;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            border: 2px solid #444444;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 2px;
+        }
+
+        #current-time-display{
+            font-family: 'Courier New', monospace;
+        }
+
+        /* 全屏按钮 */
+        .top-controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 15px;
+            z-index: 1000;
+        }
+
+        .fullscreen-toggle {
+            background: linear-gradient(to right, #d69e2e, #b7791f);
+            border: none;
+            border-radius: 50px;
+            color: white;
+            cursor: pointer;
+            padding: 12px 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .fullscreen-toggle:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .fullscreen-toggle.active {
+            background: linear-gradient(to right, #b7791f, #975a16);
+            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        /* 精简模式样式 */
+        .compact-mode {
+            max-width: 900px;
+        }
+
+        .compact-mode .chart-panel,
+        .compact-mode .team-stats,
+        .compact-mode .foul-controls,
+        .compact-mode .match-info-item:nth-child(n+4) {
+            display: none !important;
+        }
+
+        .compact-mode .score-controls .score-btn {
+            min-width: 70px;
+            padding: 10px 4px;
+            font-size: 0.9rem;
+        }
+
+        .compact-mode .score-controls .score-btn i {
+            font-size: 1rem;
+            margin-bottom: 3px;
+        }
+
+        .compact-mode .team-scoreboard {
+            padding: 15px;
+            *max-width: 350px;
+        }
+
+        .compact-mode .score {
+            font-size: 4.5rem;
+            min-height: 100px;
+            padding: 12px;
+        }
+
+        .compact-mode .control-panel {
+            padding: 15px;
+        }
+
+        .compact-mode .global-btn {
+            min-width: 150px;
+            padding: 12px 15px;
+        }
+
+        /* 横屏模式样式 - 改为旋转方式 */
+        .landscape-mode {
+            transform: rotate(90deg);
+            transform-origin: center center;
+            width: 100vh;
+            height: 100vw;
+            max-width: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            margin-top: -50vw;
+            margin-left: -50vh;
+            overflow: auto;
+            padding: 20px;
+        }
+
+        .landscape-mode .main-content {
+            flex-direction: row;
+            height: 100%;
+        }
+
+        .landscape-mode .left-panel,
+        .landscape-mode .right-panel {
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        .landscape-mode .scoreboard-container {
+            flex-direction: row;
+        }
+
+        .landscape-mode .team-scoreboard {
+            max-width: none;
+            height: 100%;
+        }
+
+        .landscape-mode .timer-panel {
+            margin-bottom: 20px;
+        }
+
+        .landscape-mode .chart-panel {
+            margin-bottom: 20px;
+        }
+
+        /* 控制面板标题固定样式 */
+        .control-panel-header {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: linear-gradient(145deg, #222222, #111111);
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #444444;
+        }
+
+        .control-panel-content {
+            overflow-y: auto;
+            max-height: 500px;
+        }
+
+        .landscape-mode .control-panel-content {
+            max-height: 70vh;
+        }
+
+        .top-controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 15px;
+            z-index: 1000;
+        }
+
+        .mode-toggle {
+            background: linear-gradient(145deg, #4a5568, #2d3748);
+            border: none;
+            border-radius: 50px;
+            color: white;
+            cursor: pointer;
+            padding: 12px 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .mode-toggle:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .mode-toggle i {
+            font-size: 1.2rem;
+        }
+
+        .compact-toggle {
+            background: linear-gradient(to right, #805ad5, #6b46c1);
+        }
+
+        .landscape-toggle {
+            background: linear-gradient(to right, #38a169, #2f855a);
+        }
+
+        .compact-toggle.active {
+            background: linear-gradient(to right, #6b46c1, #553c9a);
+            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .landscape-toggle.active {
+            background: linear-gradient(to right, #2f855a, #276749);
+            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 6px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 8px;
+            color: #ffcc00;
+            text-shadow: 0 0 10px rgba(255, 204, 0, 0.7);
+            letter-spacing: 2px;
+            font-weight: 800;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: #cccccc;
+            margin-bottom: 20px;
+        }
+
+        .main-content {
+            *display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            width: 100%;
+        }
+
+        .left-panel {
+            flex: 3;
+            min-width: 300px;
+        }
+
+        .right-panel {
+            flex: 2;
+            min-width: 300px;
+        }
+
+        .scoreboard-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            width: 100%;
+        }
+
+        .team-scoreboard {
+            background: linear-gradient(145deg, #222222, #111111);
+            border-radius: 8px;
+            padding: 20px;
+            width: 100%;
+            max-width: 450px;
+            width: calc(50% - 20px);
+            box-shadow:
+                    0 5px 15px rgba(0, 0, 0, 0.6),
+                    inset 0 0 20px rgba(0, 0, 0, 0.8);
+            border: 4px solid #333333;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 比分牌金属边框效果 */
+        .team-scoreboard::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #555555, #888888, #555555);
+            z-index: -1;
+            border-radius: 10px;
+        }
+
+        .team-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #444444;
+        }
+
+        .team-title {
+            font-size: 1.6rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .team1 .team-title {
+            color: #ff3333;
+            text-shadow: 0 0 5px rgba(255, 51, 51, 0.7);
+        }
+
+        .team2 .team-title {
+            color: #3366ff;
+            text-shadow: 0 0 5px rgba(51, 102, 255, 0.7);
+        }
+
+        .score {
+            font-size: 5.5rem;
+            font-weight: 900;
+            text-align: center;
+            margin: 12px 0;
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
+            background: linear-gradient(145deg, #000000, #1a1a1a);
+            border-radius: 10px;
+            padding: 15px;
+            min-height: 130px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #444444;
+            font-family: 'Courier New', monospace;
+            box-shadow:
+                    inset 0 0 15px rgba(0, 0, 0, 0.9),
+                    0 5px 10px rgba(0, 0, 0, 0.5);
+            color: #ffff00;
+            letter-spacing: 2px;
+        }
+
+        .team1 .score {
+            border-color: #ff3333;
+            box-shadow:
+                    inset 0 0 15px rgba(0, 0, 0, 0.9),
+                    0 5px 10px rgba(0, 0, 0, 0.5),
+                    0 0 10px rgba(255, 51, 51, 0.3);
+        }
+
+        .team2 .score {
+            border-color: #3366ff;
+            box-shadow:
+                    inset 0 0 15px rgba(0, 0, 0, 0.9),
+                    0 5px 10px rgba(0, 0, 0, 0.5),
+                    0 0 10px rgba(51, 102, 255, 0.3);
+        }
+
+        .team-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 6px;
+            border: 2px solid #333333;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 0 10px;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: #aaaaaa;
+            margin-bottom: 5px;
+            letter-spacing: 1px;
+        }
+
+        .stat-value {
+            font-size: 1.6rem;
+            font-weight: 700;
+            font-family: 'Courier New', monospace;
+        }
+
+        .team1 .stat-value {
+            color: #ff6666;
+        }
+
+        .team2 .stat-value {
+            color: #6699ff;
+        }
+
+        .foul-controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .foul-btn {
+            padding: 8px 15px;
+            font-size: 0.9rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .add-foul-btn {
+            background: linear-gradient(to bottom, #555555, #222222);
+            color: #ffffff;
+            border: 1px solid #666666;
+        }
+
+        .add-foul-btn:hover {
+            background: linear-gradient(to bottom, #666666, #333333);
+            transform: scale(1.05);
+        }
+
+        .remove-foul-btn {
+            background: linear-gradient(to bottom, #333333, #111111);
+            color: #cccccc;
+            border: 1px solid #444444;
+        }
+
+        .remove-foul-btn:hover {
+            background: linear-gradient(to bottom, #444444, #222222);
+            transform: scale(1.05);
+        }
+
+        .score-controls {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .score-btn {
+            flex: 1;
+            min-width: 70px;
+            padding: 12px 5px;
+            font-size: 1rem;
+            font-weight: 700;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            box-shadow: 0 3px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        .score-btn i {
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+        }
+
+        .add-btn {
+            background: linear-gradient(to bottom, #44aa44, #226622);
+            border: 1px solid #55bb55;
+        }
+
+        .add-btn:hover {
+            background: linear-gradient(to bottom, #55bb55, #337733);
+            transform: scale(1.05);
+        }
+
+        .subtract-btn {
+            background: linear-gradient(to bottom, #aa4444, #662222);
+            border: 1px solid #bb5555;
+        }
+
+        .subtract-btn:hover {
+            background: linear-gradient(to bottom, #bb5555, #773333);
+            transform: scale(1.05);
+        }
+
+        .reset-btn {
+            background: linear-gradient(to bottom, #777744, #555522);
+            border: 1px solid #888855;
+        }
+
+        .reset-btn:hover {
+            background: linear-gradient(to bottom, #888855, #666633);
+            transform: scale(1.05);
+        }
+
+        .control-panel {
+            background: linear-gradient(145deg, #222222, #111111);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow:
+                    0 5px 15px rgba(0, 0, 0, 0.6),
+                    inset 0 0 20px rgba(0, 0, 0, 0.8);
+            border: 4px solid #333333;
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .control-panel::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #555555, #888888, #555555);
+            z-index: -1;
+            border-radius: 10px;
+        }
+
+        .control-panel h2 {
+            text-align: center;
+            margin-bottom: 15px;
+            color: #ffcc00;
+            font-size: 1.5rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            text-shadow: 0 0 5px rgba(255, 204, 0, 0.5);
+        }
+
+        .mode-controls {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 6px;
+            border: 2px solid #333333;
+        }
+
+        .mode-control {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .mode-label {
+            font-weight: 600;
+            color: #cccccc;
+            letter-spacing: 1px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 55px;
+            height: 26px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #333333;
+            transition: .4s;
+            border-radius: 34px;
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.8);
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #44aa44;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(29px);
+        }
+
+        .match-period {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 6px;
+            border: 2px solid #333333;
+            margin-bottom: 15px;
+        }
+
+        .period-label {
+            font-weight: 600;
+            color: #cccccc;
+            letter-spacing: 1px;
+        }
+
+        .period-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .period-btn {
+            padding: 8px 15px;
+            background: #333333;
+            border: none;
+            border-radius: 4px;
+            color: #cccccc;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s ease;
+            letter-spacing: 1px;
+        }
+
+        .period-btn:hover {
+            background: #444444;
+        }
+
+        .period-btn.active {
+            background: #ffcc00;
+            color: #000000;
+        }
+
+        .match-info {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .match-info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 6px;
+            border: 2px solid #333333;
+        }
+
+        .match-info-item label {
+            font-weight: 600;
+            color: #cccccc;
+            letter-spacing: 1px;
+        }
+
+        .match-info-item input, .match-info-item select {
+            background: #333333;
+            border: 1px solid #555555;
+            border-radius: 4px;
+            padding: 8px 12px;
+            color: #ffffff;
+            width: 180px;
+            font-size: 0.9rem;
+            font-family: 'Courier New', monospace;
+        }
+
+        .global-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .global-btn {
+            padding: 14px 20px;
+            font-size: 1rem;
+            font-weight: 700;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-width: 170px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            box-shadow: 0 3px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        .reset-all-btn {
+            background: linear-gradient(to bottom, #777744, #555522);
+            color: white;
+            border: 1px solid #888855;
+        }
+
+        .reset-all-btn:hover {
+            background: linear-gradient(to bottom, #888855, #666633);
+            transform: translateY(-2px);
+        }
+
+        .history-btn {
+            background: linear-gradient(to bottom, #555577, #333355);
+            color: white;
+            border: 1px solid #666688;
+        }
+
+        .history-btn:hover {
+            background: linear-gradient(to bottom, #666688, #444466);
+            transform: translateY(-2px);
+        }
+
+        .export-btn {
+            background: linear-gradient(to bottom, #447777, #225555);
+            color: white;
+            border: 1px solid #558888;
+        }
+
+        .export-btn:hover {
+            background: linear-gradient(to bottom, #558888, #336666);
+            transform: translateY(-2px);
+        }
+
+        .chart-panel {
+            background: linear-gradient(145deg, #222222, #111111);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow:
+                    0 5px 15px rgba(0, 0, 0, 0.6),
+                    inset 0 0 20px rgba(0, 0, 0, 0.8);
+            border: 4px solid #333333;
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .chart-panel::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #555555, #888888, #555555);
+            z-index: -1;
+            border-radius: 10px;
+        }
+
+        .chart-panel h2 {
+            text-align: center;
+            margin-bottom: 15px;
+            color: #ffcc00;
+            font-size: 1.5rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            text-shadow: 0 0 5px rgba(255, 204, 0, 0.5);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 250px;
+            width: 100%;
+        }
+
+        .score-history {
+            background: linear-gradient(145deg, #222222, #111111);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow:
+                    0 5px 15px rgba(0, 0, 0, 0.6),
+                    inset 0 0 20px rgba(0, 0, 0, 0.8);
+            border: 4px solid #333333;
+            display: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .score-history::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #555555, #888888, #555555);
+            z-index: -1;
+            border-radius: 10px;
+        }
+
+        .score-history h2 {
+            text-align: center;
+            margin-bottom: 15px;
+            color: #ffcc00;
+            font-size: 1.5rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            text-shadow: 0 0 5px rgba(255, 204, 0, 0.5);
+        }
+
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .history-table th {
+            background-color: #333333;
+            padding: 12px;
+            text-align: left;
+            color: #ffcc00;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+        }
+
+        .history-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #333333;
+            font-family: 'Courier New', monospace;
+        }
+
+        .history-table tr:hover {
+            background-color: rgba(255, 204, 0, 0.1);
+        }
+
+        .empty-history {
+            text-align: center;
+            padding: 25px;
+            color: #888888;
+            font-style: italic;
+        }
+
+        .clear-history-btn {
+            background: linear-gradient(to bottom, #aa4444, #662222);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 20px;
+            cursor: pointer;
+            margin-top: 15px;
+            font-weight: 600;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .clear-history-btn:hover {
+            background: linear-gradient(to bottom, #bb5555, #773333);
+            transform: translateY(-2px);
+        }
+
+        footer {
+            margin-top: 20px;
+            text-align: center;
+            color: #888888;
+            font-size: 0.85rem;
+            padding: 15px;
+            border-top: 2px solid #333333;
+        }
+
+        /* 全屏模式样式 */
+        .fullscreen-mode {
+            width: 100vw;
+            height: 100vh;
+            max-width: none;
+            padding: 10px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 9999;
+            background: #0a0a0a;
+            overflow: auto;
+        }
+
+        .fullscreen-mode .current-time {
+            font-size: 2rem;
+            padding: 15px 30px;
+        }
+
+        .fullscreen-mode .score {
+            font-size: 8rem;
+            min-height: 200px;
+        }
+
+        .fullscreen-mode .score-btn {
+            font-size: 1.2rem;
+            padding: 15px 5px;
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            color: #ffcc00;
+            margin-bottom: 10px;
+        }
+
+        .hidden{
+            display: none;
+        }
+
+        @media (max-width: 1200px) {
+            .main-content {
+                flex-direction: column;
+            }
+        }
+        /*
+        @media (max-width: 768px) {
+            .scoreboard-container {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .team-scoreboard {
+                max-width: 100%;
+				width: auto;
+            }
+
+            .score-btn {
+                min-width: 65px;
+                padding: 10px 4px;
+            }
+
+            .score {
+                font-size: 4.5rem;
+                min-height: 110px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .global-btn {
+                min-width: 140px;
+                padding: 12px 15px;
+            }
+
+            .top-controls {
+                top: 10px;
+                right: 10px;
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .mode-toggle {
+                padding: 8px 14px;
+                font-size: 0.85rem;
+            }
+        }*/
+
+        /* 自定义确认框样式 */
+        .custom-confirm-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .custom-confirm-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .custom-confirm {
+            background: linear-gradient(145deg, #222222, #111111);
+            border-radius: 10px;
+            padding: 30px;
+            width: 90%;
+            max-width: 450px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+            border: 3px solid #333333;
+            position: relative;
+            transform: scale(0.7);
+            transition: transform 0.3s ease;
+            text-align: center;
+        }
+
+        .custom-confirm.active {
+            transform: scale(1);
+        }
+
+        .custom-confirm::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #555555, #888888, #555555);
+            z-index: -1;
+            border-radius: 12px;
+        }
+
+        .confirm-icon {
+            font-size: 3rem;
+            color: #ffcc00;
+            margin-bottom: 15px;
+        }
+
+        .confirm-title {
+            font-size: 1.5rem;
+            color: #ffcc00;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .confirm-message {
+            color: #cccccc;
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+
+        .confirm-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .confirm-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 100px;
+        }
+
+        .confirm-btn.confirm {
+            background: linear-gradient(to bottom, #44aa44, #226622);
+            color: white;
+        }
+
+        .confirm-btn.confirm:hover {
+            background: linear-gradient(to bottom, #55bb55, #337733);
+            transform: translateY(-2px);
+        }
+
+        .confirm-btn.cancel {
+            background: linear-gradient(to bottom, #aa4444, #662222);
+            color: white;
+        }
+
+        .confirm-btn.cancel:hover {
+            background: linear-gradient(to bottom, #bb5555, #773333);
+            transform: translateY(-2px);
+        }
+
+        .pulse {
+            animation: pulse 0.5s ease-in-out;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .blink {
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container" id="main-container">
+    <header>
+        <div class="logo">
+            <i class="fas fa-trophy"> 比分记录</i>
+
+            <!-- 当前时间显示 -->
+            <div class="current-time" style="zoom:0.7;">
+                <i class="fas fa-clock"></i>
+                <span id="current-time-display">00:00:00</span>
+            </div>
+
+            <!-- 模式切换按钮 -->
+            <div class="top-controls hidden">
+                <button class="mode-toggle compact-toggle hidden" style="zoom:0.8;" id="compact-toggle">
+                    <i class="fas fa-compress-alt"></i>
+                    <span>精简模式</span>
+                </button>
+                <button class="mode-toggle landscape-toggle" style="zoom:0.8;" id="landscape-toggle">
+                    <i class="fas fa-rotate"></i>
+                    <span>横屏模式</span>
+                </button>
+                <button class="fullscreen-toggle" style="zoom:0.8;" id="fullscreen-toggle">
+                    <i class="fas fa-expand"></i>
+                    <span>全屏模式</span>
+                </button>
+            </div>
+        </div>
+        <h1 class="hidden">真实比分记录板</h1>
+        <p class="subtitle hidden">专业运动比赛比分记录 - 模拟真实比分牌风格</p>
+    </header>
+
+    <div class="main-content">
+        <div class="left-panel">
+            <div class="scoreboard-container">
+                <!-- 队伍1比分板 -->
+                <div class="team-scoreboard team1">
+                    <div class="team-header">
+                        <h2 class="team-title" id="team1-name">主队</h2>
+                        <div class="team-color-indicator" style="width: 20px; height: 20px; background-color: #ff3333; border-radius: 50%;"></div>
+                    </div>
+                    <div class="score" id="team1-score">0</div>
+
+                    <div class="team-stats">
+                        <div class="stat-item">
+                            <div class="stat-label">犯规次数</div>
+                            <div class="stat-value" id="team1-fouls">0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">暂停次数</div>
+                            <div class="stat-value" id="team1-timeouts">0</div>
+                        </div>
+                    </div>
+
+                    <div class="foul-controls">
+                        <button class="foul-btn add-foul-btn" data-team="1" data-type="foul">
+                            <i class="fas fa-plus hidden"></i>
+                            <span>犯规+1</span>
+                        </button>
+                        <button class="foul-btn remove-foul-btn" data-team="1" data-type="foul">
+                            <i class="fas fa-minus hidden"></i>
+                            <span>犯规-1</span>
+                        </button>
+                        <button class="foul-btn add-foul-btn" data-team="1" data-type="timeout">
+                            <i class="fas fa-clock hidden"></i>
+                            <span>暂停+1</span>
+                        </button>
+                    </div>
+
+                    <div class="score-controls">
+                        <button class="score-btn add-btn" data-team="1" data-points="1">
+                            <i class="fas fa-plus hidden"></i>
+                            <span>+1 分</span>
+                        </button>
+                        <button class="score-btn add-btn" data-team="1" data-points="2">
+                            <i class="fas fa-plus hidden"></i>
+                            <span>+2 分</span>
+                        </button>
+                        <button class="score-btn add-btn" data-team="1" data-points="3">
+                            <i class="fas fa-plus hidden"></i>
+                            <span>+3 分</span>
+                        </button>
+                        <button class="score-btn subtract-btn" data-team="1" data-points="1">
+                            <i class="fas fa-minus hidden"></i>
+                            <span>-1 分</span>
+                        </button>
+                        <button class="score-btn reset-btn" data-team="1">
+                            <i class="fas fa-redo">重置</i>
+                            <span class="hidden">重置</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 队伍2比分板 -->
+                <div class="team-scoreboard team2">
+                    <div class="team-header">
+                        <h2 class="team-title" id="team2-name">客队</h2>
+                        <div class="team-color-indicator" style="width: 20px; height: 20px; background-color: #3366ff; border-radius: 50%;"></div>
+                    </div>
+                    <div class="score" id="team2-score">0</div>
+
+                    <div class="team-stats">
+                        <div class="stat-item">
+                            <div class="stat-label">犯规次数</div>
+                            <div class="stat-value" id="team2-fouls">0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">暂停次数</div>
+                            <div class="stat-value" id="team2-timeouts">0</div>
+                        </div>
+                    </div>
+
+                    <div class="foul-controls">
+                        <button class="foul-btn add-foul-btn" data-team="2" data-type="foul">
+                            <i class="fas fa-plus hidden"></i>
+                            <span>犯规+1</span>
+                        </button>
+                        <button class="foul-btn remove-foul-btn" data-team="2" data-type="foul">
+                            <i class="fas fa-minus hidden"></i>
+                            <span>犯规-1</span>
+                        </button>
+                        <button class="foul-btn add-foul-btn" data-team="2" data-type="timeout">
+                            <i class="fas fa-clock hidden"></i>
+                            <span>暂停+1</span>
+                        </button>
+                    </div>
+
+                    <div class="score-controls">
+                        <button class="score-btn add-btn" data-team="2" data-points="1">
+                            <i class="fas fa-plus hidden"></i>
+                            <span>+1 分</span>
+                        </button>
+                        <button class="score-btn add-btn" data-team="2" data-points="2">
+                            <i class="fas fa-plus hidden"></i>
+                            <span>+2 分</span>
+                        </button>
+                        <button class="score-btn add-btn" data-team="2" data-points="3">
+                            <i class="fas fa-plus hidden"></i>
+                            <span>+3 分</span>
+                        </button>
+                        <button class="score-btn subtract-btn" data-team="2" data-points="1">
+                            <i class="fas fa-minus hidden"></i>
+                            <span>-1 分</span>
+                        </button>
+                        <button class="score-btn reset-btn" data-team="2">
+                            <i class="fas fa-redo">重置</i>
+                            <span class="hidden">重置</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 比分趋势图表 -->
+            <div class="chart-panel">
+                <h2><i class="fas fa-chart-line"></i> 比分趋势图表</h2>
+                <div class="chart-container">
+                    <canvas id="score-chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <!-- 控制面板 -->
+            <div class="control-panel">
+                <div class="control-panel-header">
+                    <h2><i class="fas fa-cog"></i> 比赛控制面板</h2>
+                </div>
+                <div class="control-panel-content">
+                    <div class="mode-controls">
+                        <div class="mode-control">
+                            <span class="mode-label">精简模式</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="compact-mode-toggle">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="mode-control">
+                            <span class="mode-label">横屏模式</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="landscape-mode-toggle">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="mode-control">
+                            <span class="mode-label">全屏模式</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="fullscreen-mode-toggle">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="match-period">
+                        <div class="period-label">当前节次：</div>
+                        <div class="period-controls">
+                            <button class="period-btn active" data-period="1">第1节</button>
+                            <button class="period-btn" data-period="2">第2节</button>
+                            <button class="period-btn" data-period="3">第3节</button>
+                            <button class="period-btn" data-period="4">第4节</button>
+                            <button class="period-btn" data-period="ot">加时</button>
+                        </div>
+                    </div>
+
+                    <div class="match-info">
+                        <div class="match-info-item">
+                            <label for="sport-type">比赛类型：</label>
+                            <select id="sport-type">
+                                <option value="basketball">篮球</option>
+                                <option value="football">足球</option>
+                                <option value="volleyball">排球</option>
+                                <option value="tennis">网球</option>
+                                <option value="custom">自定义</option>
+                            </select>
+                        </div>
+                        <div class="match-info-item">
+                            <label for="team1-input">主队名称：</label>
+                            <input type="text" id="team1-input" value="主队" maxlength="20">
+                        </div>
+                        <div class="match-info-item">
+                            <label for="team2-input">客队名称：</label>
+                            <input type="text" id="team2-input" value="客队" maxlength="20">
+                        </div>
+                        <div class="match-info-item">
+                            <label for="max-fouls">犯规上限：</label>
+                            <input type="number" id="max-fouls" min="0" max="50" value="5">
+                        </div>
+                        <div class="match-info-item">
+                            <label for="max-timeouts">暂停上限：</label>
+                            <input type="number" id="max-timeouts" min="0" max="20" value="3">
+                        </div>
+                    </div>
+                    <div class="global-controls">
+                        <button class="global-btn reset-all-btn" id="reset-all">
+                            <i class="fas fa-sync-alt"></i>
+                            重置全部
+                        </button>
+                        <button class="global-btn history-btn" id="show-history">
+                            <i class="fas fa-history"></i>
+                            比分历史
+                        </button>
+                        <button class="global-btn export-btn" id="export-data">
+                            <i class="fas fa-download"></i>
+                            导出数据
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 比分历史记录 -->
+            <div class="score-history" id="history-panel">
+                <h2><i class="fas fa-history"></i> 比分历史记录</h2>
+                <table class="history-table">
+                    <thead>
+                    <tr>
+                        <th>时间</th>
+                        <th>节次</th>
+                        <th>事件</th>
+                        <th id="history-team1">主队</th>
+                        <th id="history-team2">客队</th>
+                    </tr>
+                    </thead>
+                    <tbody id="history-body">
+                    <!-- 历史记录将通过JavaScript动态添加 -->
+                    </tbody>
+                </table>
+                <div id="empty-history-message" class="empty-history">暂无历史记录，开始调整比分来记录吧！</div>
+                <button class="clear-history-btn" id="clear-history">
+                    <i class="fas fa-trash"></i> 清除历史记录
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>© 2023 真实比分记录板 | 专业运动比赛比分记录系统</p>
+        <p>模拟真实体育比分牌设计，专为比赛场景优化</p>
+    </footer>
+</div>
+
+<!-- 自定义确认框 -->
+<div class="custom-confirm-overlay" id="confirm-overlay">
+    <div class="custom-confirm" id="custom-confirm">
+        <div class="confirm-icon">
+            <i class="fas fa-exclamation-circle"></i>
+        </div>
+        <h3 class="confirm-title" id="confirm-title">确认操作</h3>
+        <p class="confirm-message" id="confirm-message">您确定要执行此操作吗？</p>
+        <div class="confirm-buttons">
+            <button class="confirm-btn confirm" id="confirm-ok">确定</button>
+            <button class="confirm-btn cancel" id="confirm-cancel">取消</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 初始化变量
+    let team1Score = 0;
+    let team2Score = 0;
+    let team1Fouls = 0;
+    let team2Fouls = 0;
+    let team1Timeouts = 0;
+    let team2Timeouts = 0;
+    let currentPeriod = 1;
+    let scoreHistory = [];
+    let historyVisible = false;
+    let scoreChart = null;
+    let chartData = {
+        labels: ["比赛开始"],
+        team1Scores: [0],
+        team2Scores: [0]
+    };
+    let isFullscreen = false;
+
+    // 新模式变量
+    let compactMode = false;
+    let landscapeMode = false;
+
+    // DOM 元素
+    const currentTimeElement = document.getElementById('current-time-display');
+    const fullscreenToggle = document.getElementById('fullscreen-toggle');
+    const team1ScoreElement = document.getElementById('team1-score');
+    const team2ScoreElement = document.getElementById('team2-score');
+    const team1FoulsElement = document.getElementById('team1-fouls');
+    const team2FoulsElement = document.getElementById('team2-fouls');
+    const team1TimeoutsElement = document.getElementById('team1-timeouts');
+    const team2TimeoutsElement = document.getElementById('team2-timeouts');
+    const team1NameElement = document.getElementById('team1-name');
+    const team2NameElement = document.getElementById('team2-name');
+    const team1Input = document.getElementById('team1-input');
+    const team2Input = document.getElementById('team2-input');
+    const historyTeam1Element = document.getElementById('history-team1');
+    const historyTeam2Element = document.getElementById('history-team2');
+    const historyBody = document.getElementById('history-body');
+    const historyPanel = document.getElementById('history-panel');
+    const emptyHistoryMessage = document.getElementById('empty-history-message');
+    const sportTypeSelect = document.getElementById('sport-type');
+    const maxFoulsInput = document.getElementById('max-fouls');
+    const maxTimeoutsInput = document.getElementById('max-timeouts');
+    const periodButtons = document.querySelectorAll('.period-btn');
+    const mainContainer = document.getElementById('main-container');
+    const compactToggle = document.getElementById('compact-toggle');
+    const landscapeToggle = document.getElementById('landscape-toggle');
+    const compactModeToggle = document.getElementById('compact-mode-toggle');
+    const landscapeModeToggle = document.getElementById('landscape-mode-toggle');
+    const fullscreenModeToggle = document.getElementById('fullscreen-mode-toggle');
+
+    // 初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        // 初始化图表
+        initScoreChart();
+
+        // 为所有按钮添加事件监听器
+        document.querySelectorAll('.score-btn').forEach(button => {
+            button.addEventListener('click', handleScoreButtonClick);
+        });
+
+        document.querySelectorAll('.foul-btn').forEach(button => {
+            button.addEventListener('click', handleFoulButtonClick);
+        });
+
+        // 节次按钮事件
+        periodButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                setPeriod(parseInt(this.getAttribute('data-period')) || this.getAttribute('data-period'));
+            });
+        });
+
+        // 全局控制按钮
+        document.getElementById('reset-all').addEventListener('click', resetAllBefore);
+        document.getElementById('show-history').addEventListener('click', toggleHistoryPanel);
+        document.getElementById('export-data').addEventListener('click', exportDataCSV);
+        document.getElementById('clear-history').addEventListener('click', clearHistoryBefore);
+
+        // 队伍名称输入
+        team1Input.addEventListener('input', updateTeamNames);
+        team2Input.addEventListener('input', updateTeamNames);
+
+        // 全屏按钮
+        fullscreenToggle.addEventListener('click', toggleFullscreenMode);
+
+        // 运动类型选择
+        sportTypeSelect.addEventListener('change', updateSportType);
+
+        // 模式切换按钮
+        compactToggle.addEventListener('click', toggleCompactMode);
+        landscapeToggle.addEventListener('click', toggleLandscapeMode);
+        compactModeToggle.addEventListener('change', toggleCompactMode);
+        landscapeModeToggle.addEventListener('change', toggleLandscapeMode);
+        fullscreenModeToggle.addEventListener('change', toggleFullscreenMode);
+
+        // 更新历史表格中的队伍名称
+        updateHistoryTeamNames();
+
+        // 添加初始历史记录
+        addHistoryEntry("比赛开始", 0, 0, 1);
+
+        // 启动时钟
+        updateClock();
+        setInterval(updateClock, 1000);
+
+        // 监听全屏变化
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+        document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+        document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+    });
+
+    // 更新时钟显示
+    function updateClock() {
+        const now = new Date();
+        const hours = now.getHours().toString().padStart(2, '0');
+        const minutes = now.getMinutes().toString().padStart(2, '0');
+        const seconds = now.getSeconds().toString().padStart(2, '0');
+        currentTimeElement.textContent = `${hours}:${minutes}:${seconds}`;
+    }
+
+    // 切换全屏模式
+    function toggleFullscreenMode() {
+        if (!isFullscreen) {
+            // 进入全屏
+            const element = document.documentElement;
+
+            if (element.requestFullscreen) {
+                element.requestFullscreen();
+            } else if (element.webkitRequestFullscreen) {
+                element.webkitRequestFullscreen();
+            } else if (element.mozRequestFullScreen) {
+                element.mozRequestFullScreen();
+            } else if (element.msRequestFullscreen) {
+                element.msRequestFullscreen();
+            }
+
+            isFullscreen = true;
+            fullscreenToggle.classList.add('active');
+            fullscreenToggle.innerHTML = '<i class="fas fa-compress"></i><span>退出全屏</span>';
+            fullscreenModeToggle.checked = true;
+            addHistoryEntry("进入全屏模式", team1Score, team2Score, currentPeriod);
+        } else {
+            // 退出全屏
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            } else if (document.mozCancelFullScreen) {
+                document.mozCancelFullScreen();
+            } else if (document.msExitFullscreen) {
+                document.msExitFullscreen();
+            }
+
+            isFullscreen = false;
+            fullscreenToggle.classList.remove('active');
+            fullscreenToggle.innerHTML = '<i class="fas fa-expand"></i><span>全屏模式</span>';
+            fullscreenModeToggle.checked = false;
+            addHistoryEntry("退出全屏模式", team1Score, team2Score, currentPeriod);
+        }
+    }
+
+    // 处理全屏变化
+    function handleFullscreenChange() {
+        const fullscreenElement =
+            document.fullscreenElement ||
+            document.webkitFullscreenElement ||
+            document.mozFullScreenElement ||
+            document.msFullscreenElement;
+
+        isFullscreen = !!fullscreenElement;
+
+        if (isFullscreen) {
+            mainContainer.classList.add('fullscreen-mode');
+            fullscreenToggle.classList.add('active');
+            fullscreenToggle.innerHTML = '<i class="fas fa-compress"></i><span>退出全屏</span>';
+        } else {
+            mainContainer.classList.remove('fullscreen-mode');
+            fullscreenToggle.classList.remove('active');
+            fullscreenToggle.innerHTML = '<i class="fas fa-expand"></i><span>全屏模式</span>';
+        }
+    }
+
+    // 处理分数按钮点击
+    function handleScoreButtonClick(event) {
+        const button = event.currentTarget;
+        const team = button.getAttribute('data-team');
+        const points = parseInt(button.getAttribute('data-points')) || 0;
+
+        // 判断是加分还是减分按钮
+        if (button.classList.contains('add-btn')) {
+            updateScore(team, points);
+        } else if (button.classList.contains('subtract-btn')) {
+            updateScore(team, -points);
+        } else if (button.classList.contains('reset-btn')) {
+            resetTeamScoreBefore(team);
+        }
+
+        // 添加动画效果
+        const scoreElement = team === '1' ? team1ScoreElement : team2ScoreElement;
+        scoreElement.classList.add('pulse');
+        setTimeout(() => {
+            scoreElement.classList.remove('pulse');
+        }, 500);
+    }
+
+    // 处理犯规按钮点击
+    function handleFoulButtonClick(event) {
+        const button = event.currentTarget;
+        const team = button.getAttribute('data-team');
+        const type = button.getAttribute('data-type');
+
+        if (button.classList.contains('add-foul-btn')) {
+            if (type === 'foul') {
+                updateFouls(team, 1);
+            } else if (type === 'timeout') {
+                updateTimeouts(team, 1);
+            }
+        } else if (button.classList.contains('remove-foul-btn')) {
+            if (type === 'foul') {
+                updateFouls(team, -1);
+            }
+        }
+    }
+
+    // 更新分数
+    function updateScore(team, points) {
+        let action = "";
+
+        if (team === '1') {
+            team1Score = Math.max(0, team1Score + points);
+            team1ScoreElement.textContent = team1Score;
+            action = points > 0 ? `主队增加 ${points} 分` : `主队减少 ${Math.abs(points)} 分`;
+        } else {
+            team2Score = Math.max(0, team2Score + points);
+            team2ScoreElement.textContent = team2Score;
+            action = points > 0 ? `客队增加 ${points} 分` : `客队减少 ${Math.abs(points)} 分`;
+        }
+
+        // 更新图表数据
+        updateChartData();
+
+        // 添加到历史记录
+        addHistoryEntry(action, team1Score, team2Score, currentPeriod);
+    }
+
+    // 更新犯规次数
+    function updateFouls(team, change) {
+        const maxFouls = parseInt(maxFoulsInput.value) || 5;
+
+        if (team === '1') {
+            team1Fouls = Math.max(0, Math.min(maxFouls, team1Fouls + change));
+            team1FoulsElement.textContent = team1Fouls;
+
+            if (change > 0) {
+                addHistoryEntry(`主队犯规+1 (${team1Fouls}/${maxFouls})`, team1Score, team2Score, currentPeriod);
+
+                // 如果达到犯规上限，添加视觉提示
+                if (team1Fouls >= maxFouls) {
+                    team1FoulsElement.classList.add('blink');
+                } else {
+                    team1FoulsElement.classList.remove('blink');
+                }
+            }
+        } else {
+            team2Fouls = Math.max(0, Math.min(maxFouls, team2Fouls + change));
+            team2FoulsElement.textContent = team2Fouls;
+
+            if (change > 0) {
+                addHistoryEntry(`客队犯规+1 (${team2Fouls}/${maxFouls})`, team1Score, team2Score, currentPeriod);
+
+                // 如果达到犯规上限，添加视觉提示
+                if (team2Fouls >= maxFouls) {
+                    team2FoulsElement.classList.add('blink');
+                } else {
+                    team2FoulsElement.classList.remove('blink');
+                }
+            }
+        }
+    }
+
+    // 更新暂停次数
+    function updateTimeouts(team, change) {
+        const maxTimeouts = parseInt(maxTimeoutsInput.value) || 3;
+
+        if (team === '1') {
+            team1Timeouts = Math.max(0, Math.min(maxTimeouts, team1Timeouts + change));
+            team1TimeoutsElement.textContent = team1Timeouts;
+
+            if (change > 0) {
+                addHistoryEntry(`主队暂停+1 (${team1Timeouts}/${maxTimeouts})`, team1Score, team2Score, currentPeriod);
+
+                // 如果达到暂停上限，添加视觉提示
+                if (team1Timeouts >= maxTimeouts) {
+                    team1TimeoutsElement.classList.add('blink');
+                } else {
+                    team1TimeoutsElement.classList.remove('blink');
+                }
+            }
+        } else {
+            team2Timeouts = Math.max(0, Math.min(maxTimeouts, team2Timeouts + change));
+            team2TimeoutsElement.textContent = team2Timeouts;
+
+            if (change > 0) {
+                addHistoryEntry(`客队暂停+1 (${team2Timeouts}/${maxTimeouts})`, team1Score, team2Score, currentPeriod);
+
+                // 如果达到暂停上限，添加视觉提示
+                if (team2Timeouts >= maxTimeouts) {
+                    team2TimeoutsElement.classList.add('blink');
+                } else {
+                    team2TimeoutsElement.classList.remove('blink');
+                }
+            }
+        }
+    }
+
+    function resetTeamScoreBefore(team) {
+        const teamName = team === '1' ? team1NameElement.textContent : team2NameElement.textContent;
+        showConfirm(
+            '重置比赛数据',
+            '您确定要重置'+teamName+'分数吗？此操作将清除当前比分。',
+            function() {
+                // 确认回调
+                //alert('数据已重置！');
+                resetTeamScore(team);
+            },
+            function() {
+                // 取消回调
+                console.log('用户取消了重置操作');
+            }
+        );
+    }
+
+    // 重置队伍分数
+    function resetTeamScore(team) {
+        if (team === '1') {
+            team1Score = 0;
+            team1ScoreElement.textContent = '0';
+        } else {
+            team2Score = 0;
+            team2ScoreElement.textContent = '0';
+        }
+
+        const teamName = team === '1' ? team1NameElement.textContent : team2NameElement.textContent;
+        addHistoryEntry(`${teamName} 分数重置`, team1Score, team2Score, currentPeriod);
+
+        // 更新图表数据
+        updateChartData();
+    }
+
+    function resetAllBefore() {
+        showConfirm(
+            '重置比赛数据',
+            '您确定要重置所有数据吗？此操作将复位当前比赛所有数据。',
+            function() {
+                // 确认回调
+                //alert('数据已重置！');
+                resetAll();
+            },
+            function() {
+                // 取消回调
+                console.log('用户取消了重置操作');
+            }
+        );
+    }
+
+    // 重置所有数据
+    function resetAll() {
+        team1Score = 0;
+        team2Score = 0;
+        team1Fouls = 0;
+        team2Fouls = 0;
+        team1Timeouts = 0;
+        team2Timeouts = 0;
+
+        team1ScoreElement.textContent = '0';
+        team2ScoreElement.textContent = '0';
+        team1FoulsElement.textContent = '0';
+        team2FoulsElement.textContent = '0';
+        team1TimeoutsElement.textContent = '0';
+        team2TimeoutsElement.textContent = '0';
+
+        // 移除闪烁效果
+        team1FoulsElement.classList.remove('blink');
+        team2FoulsElement.classList.remove('blink');
+        team1TimeoutsElement.classList.remove('blink');
+        team2TimeoutsElement.classList.remove('blink');
+
+        // 重置图表数据
+        chartData = {
+            labels: ["比赛开始"],
+            team1Scores: [0],
+            team2Scores: [0]
+        };
+        updateChart();
+
+        addHistoryEntry("重置所有数据", 0, 0, currentPeriod);
+    }
+
+    // 设置比赛节次
+    function setPeriod(period) {
+        // 移除所有节次按钮的active类
+        periodButtons.forEach(btn => btn.classList.remove('active'));
+
+        // 为当前节次按钮添加active类
+        document.querySelector(`.period-btn[data-period="${period}"]`).classList.add('active');
+
+        // 更新当前节次
+        currentPeriod = period;
+
+        addHistoryEntry(`切换到第${period === 'ot' ? '加时' : period}节`, team1Score, team2Score, period);
+    }
+
+    // 切换精简模式
+    function toggleCompactMode() {
+        compactMode = !compactMode;
+
+        if (compactMode) {
+            mainContainer.classList.add('compact-mode');
+            compactToggle.classList.add('active');
+            compactToggle.innerHTML = '<i class="fas fa-expand-alt"></i><span>标准模式</span>';
+            compactModeToggle.checked = true;
+            addHistoryEntry("切换到精简模式", team1Score, team2Score, currentPeriod);
+        } else {
+            mainContainer.classList.remove('compact-mode');
+            compactToggle.classList.remove('active');
+            compactToggle.innerHTML = '<i class="fas fa-compress-alt"></i><span>精简模式</span>';
+            compactModeToggle.checked = false;
+            addHistoryEntry("切换到标准模式", team1Score, team2Score, currentPeriod);
+        }
+    }
+
+    // 切换横屏模式
+    function toggleLandscapeMode() {
+        landscapeMode = !landscapeMode;
+
+        if (landscapeMode) {
+            mainContainer.classList.add('landscape-mode');
+            landscapeToggle.classList.add('active');
+            landscapeToggle.innerHTML = '<i class="fas fa-undo"></i><span>竖屏模式</span>';
+            landscapeModeToggle.checked = true;
+            addHistoryEntry("切换到横屏模式", team1Score, team2Score, currentPeriod);
+        } else {
+            mainContainer.classList.remove('landscape-mode');
+            landscapeToggle.classList.remove('active');
+            landscapeToggle.innerHTML = '<i class="fas fa-rotate"></i><span>横屏模式</span>';
+            landscapeModeToggle.checked = false;
+            addHistoryEntry("切换到竖屏模式", team1Score, team2Score, currentPeriod);
+        }
+    }
+
+    // 初始化比分趋势图表
+    function initScoreChart() {
+        const ctx = document.getElementById('score-chart').getContext('2d');
+        scoreChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: chartData.labels,
+                datasets: [
+                    {
+                        label: team1NameElement.textContent,
+                        data: chartData.team1Scores,
+                        borderColor: '#ff3333',
+                        backgroundColor: 'rgba(255, 51, 51, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4
+                    },
+                    {
+                        label: team2NameElement.textContent,
+                        data: chartData.team2Scores,
+                        borderColor: '#3366ff',
+                        backgroundColor: 'rgba(51, 102, 255, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#cccccc',
+                            font: {
+                                size: 14
+                            }
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#cccccc'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#cccccc'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // 更新图表数据
+    function updateChartData() {
+        const now = new Date();
+        const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+
+        chartData.labels.push(timeString);
+        chartData.team1Scores.push(team1Score);
+        chartData.team2Scores.push(team2Score);
+
+        // 限制数据点数量
+        if (chartData.labels.length > 20) {
+            chartData.labels.shift();
+            chartData.team1Scores.shift();
+            chartData.team2Scores.shift();
+        }
+
+        updateChart();
+    }
+
+    // 更新图表
+    function updateChart() {
+        if (scoreChart) {
+            scoreChart.data.labels = chartData.labels;
+            scoreChart.data.datasets[0].data = chartData.team1Scores;
+            scoreChart.data.datasets[0].label = team1NameElement.textContent;
+            scoreChart.data.datasets[1].data = chartData.team2Scores;
+            scoreChart.data.datasets[1].label = team2NameElement.textContent;
+            scoreChart.update();
+        }
+    }
+
+    // 添加历史记录
+    function addHistoryEntry(action, score1, score2, period) {
+        const now = new Date();
+        const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+
+        const periodText = period === 'ot' ? '加时' : `第${period}节`;
+
+        const historyEntry = {
+            time: timeString,
+            period: periodText,
+            action: action,
+            team1Score: score1,
+            team2Score: score2
+        };
+
+        scoreHistory.unshift(historyEntry); // 添加到开头
+
+        // 限制历史记录数量
+        if (scoreHistory.length > 50) {
+            scoreHistory.pop();
+        }
+
+        updateHistoryTable();
+    }
+
+    // 更新历史记录表格
+    function updateHistoryTable() {
+        // 清空表格
+        historyBody.innerHTML = '';
+
+        if (scoreHistory.length === 0) {
+            emptyHistoryMessage.style.display = 'block';
+            return;
+        }
+
+        emptyHistoryMessage.style.display = 'none';
+
+        // 添加历史记录行
+        scoreHistory.forEach(entry => {
+            const row = document.createElement('tr');
+
+            const timeCell = document.createElement('td');
+            timeCell.textContent = entry.time;
+
+            const periodCell = document.createElement('td');
+            periodCell.textContent = entry.period;
+
+            const actionCell = document.createElement('td');
+            actionCell.textContent = entry.action;
+
+            const score1Cell = document.createElement('td');
+            score1Cell.textContent = entry.team1Score;
+            score1Cell.style.color = '#ff3333';
+            score1Cell.style.fontWeight = 'bold';
+
+            const score2Cell = document.createElement('td');
+            score2Cell.textContent = entry.team2Score;
+            score2Cell.style.color = '#3366ff';
+            score2Cell.style.fontWeight = 'bold';
+
+            row.appendChild(timeCell);
+            row.appendChild(periodCell);
+            row.appendChild(actionCell);
+            row.appendChild(score1Cell);
+            row.appendChild(score2Cell);
+
+            historyBody.appendChild(row);
+        });
+    }
+
+    // 切换历史记录面板显示
+    function toggleHistoryPanel() {
+        historyVisible = !historyVisible;
+
+        if (historyVisible) {
+            historyPanel.style.display = 'block';
+            document.getElementById('show-history').innerHTML = '<i class="fas fa-eye-slash"></i> 隐藏历史';
+        } else {
+            historyPanel.style.display = 'none';
+            document.getElementById('show-history').innerHTML = '<i class="fas fa-history"></i> 比分历史';
+        }
+    }
+
+    function clearHistoryBefore() {
+        if (scoreHistory.length === 0) return;
+
+        showConfirm(
+            '清除历史记录',
+            '您确定要清除所有历史记录吗？',
+            function() {
+                // 确认回调
+                //alert('数据已重置！');
+                clearHistory();
+            },
+            function() {
+                // 取消回调
+                console.log('用户取消了清除操作');
+            }
+        );
+    }
+
+    // 清除历史记录
+    function clearHistory() {
+        //if (confirm("确定要清除所有历史记录吗？")) {
+            scoreHistory = [];
+            updateHistoryTable();
+            addHistoryEntry("历史记录已清除", team1Score, team2Score, currentPeriod);
+        //}
+    }
+
+    // 导出数据
+    function exportData() {
+        const exportData = {
+            matchInfo: {
+                team1: team1NameElement.textContent,
+                team2: team2NameElement.textContent,
+                sportType: sportTypeSelect.options[sportTypeSelect.selectedIndex].text,
+                currentPeriod: currentPeriod,
+                timestamp: new Date().toISOString()
+            },
+            scores: {
+                team1: team1Score,
+                team2: team2Score,
+                team1Fouls: team1Fouls,
+                team2Fouls: team2Fouls,
+                team1Timeouts: team1Timeouts,
+                team2Timeouts: team2Timeouts
+            },
+            history: scoreHistory,
+            chartData: chartData
+        };
+
+        const dataStr = JSON.stringify(exportData, null, 2);
+        const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+
+        const exportFileDefaultName = `scoreboard_${team1NameElement.textContent}_vs_${team2NameElement.textContent}_${new Date().toISOString().slice(0, 10)}.json`;
+
+        const linkElement = document.createElement('a');
+        linkElement.setAttribute('href', dataUri);
+        linkElement.setAttribute('download', exportFileDefaultName);
+        linkElement.click();
+
+        addHistoryEntry("导出比赛数据", team1Score, team2Score, currentPeriod);
+    }
+
+    // CSV导出功能
+    function exportDataCSV() {
+        const mockData = {
+            matchInfo: {
+                team1: team1NameElement.textContent,
+                team2: team2NameElement.textContent,
+                sportType: sportTypeSelect.options[sportTypeSelect.selectedIndex].text,
+                currentPeriod: currentPeriod,
+                timestamp: new Date().toISOString()
+            },
+            scores: {
+                team1: team1Score,
+                team2: team2Score,
+                team1Fouls: team1Fouls,
+                team2Fouls: team2Fouls,
+                team1Timeouts: team1Timeouts,
+                team2Timeouts: team2Timeouts
+            },
+            history: scoreHistory,
+            chartData: chartData
+        };
+        const data = mockData; // 实际使用时应传入当前比赛数据
+
+        // 创建CSV内容
+        let csvContent = "";
+
+        // 1. 添加UTF-8 BOM（确保Excel正确显示中文）
+        csvContent = '\ufeff';
+
+        // 2. 添加比赛基本信息
+        csvContent += "比赛基本信息\n";
+        csvContent += "字段,值\n";
+        csvContent += `主队,${data.matchInfo.team1}\n`;
+        csvContent += `客队,${data.matchInfo.team2}\n`;
+        //csvContent += `当前节次,${data.matchInfo.currentPeriod}\n`;
+        csvContent += `比赛时间,${new Date(data.matchInfo.timestamp).toLocaleString('zh-CN')}\n`;
+        csvContent += `最终比分,${data.scores.team1}-${data.scores.team2}\n`;
+        csvContent += data.team1Fouls?`主队犯规,${data.team1Fouls}\n`:``;
+        csvContent += data.team2Fouls?`客队犯规,${data.team2Fouls}\n`:``;
+        csvContent += data.team1Timeouts?`主队暂停,${data.team1Timeouts}\n`:``;
+        csvContent += data.team2Timeouts?`客队暂停,${data.team2Timeouts}\n`:``;
+        csvContent += data.matchInfo.maxFouls?`犯规上限,${data.matchInfo.maxFouls}\n`:``;
+        csvContent += data.matchInfo.maxTimeouts?`暂停上限,${data.matchInfo.maxTimeouts}\n`:``;
+
+        // 3. 添加一个空行
+        csvContent += "\n";
+
+        // 4. 添加历史记录
+        csvContent += "历史记录\n";
+        csvContent += "时间,节次,事件,主队得分,客队得分\n";
+        data.history.forEach(entry => {
+            // 处理CSV特殊字符（如逗号、引号、换行符）
+            const safeTime = entry.time.replace(/"/g, '""');
+            const safePeriod = entry.period.replace(/"/g, '""');
+            const safeAction = entry.action.replace(/"/g, '""');
+
+            csvContent += `"${safeTime}","${safePeriod}","${safeAction}",${entry.team1Score},${entry.team2Score}\n`;
+        });
+
+        // 5. 添加一个空行
+        csvContent += "\n";
+
+        // 6. 添加图表数据
+        csvContent += "比分趋势数据\n";
+        csvContent += "时间,主队得分,客队得分,分差\n";
+
+        for (let i = 0; i < data.chartData.labels.length; i++) {
+            const time = data.chartData.labels[i];
+            const team1Score = data.chartData.team1Scores[i] || 0;
+            const team2Score = data.chartData.team2Scores[i] || 0;
+            const pointDifference = team1Score - team2Score;
+
+            csvContent += `${time},${team1Score},${team2Score},${pointDifference}\n`;
+        }
+
+        // 预览数据
+        //document.getElementById('data-preview').textContent = csvContent;
+
+        // 创建下载链接
+        const fileName = `比分记录_${data.matchInfo.team1}_vs_${data.matchInfo.team2}_${new Date().toISOString().slice(0, 10)}.csv`;
+
+        // 创建Blob对象
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+
+        // 创建下载链接
+        const link = document.createElement('a');
+        if (link.download !== undefined) {
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', fileName);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } else {
+            alert('您的浏览器不支持此导出功能，请使用Chrome、Firefox或Edge浏览器。');
+        }
+
+        return csvContent;
+    }
+
+    // 更新队伍名称
+    function updateTeamNames() {
+        const team1Name = team1Input.value || "主队";
+        const team2Name = team2Input.value || "客队";
+
+        team1NameElement.textContent = team1Name;
+        team2NameElement.textContent = team2Name;
+
+        updateHistoryTeamNames();
+        updateChart();
+
+        addHistoryEntry(`队伍名称更新: ${team1Name} vs ${team2Name}`, team1Score, team2Score, currentPeriod);
+    }
+
+    // 更新历史记录表格中的队伍名称
+    function updateHistoryTeamNames() {
+        historyTeam1Element.textContent = team1NameElement.textContent;
+        historyTeam2Element.textContent = team2NameElement.textContent;
+    }
+
+    // 根据运动类型更新界面
+    function updateSportType() {
+        const sportType = sportTypeSelect.value;
+        let team1Default, team2Default;
+
+        switch(sportType) {
+            case 'basketball':
+                team1Default = "湖人队";
+                team2Default = "凯尔特人队";
+                if (compactMode){
+                    compactModeToggle.click();
+                }
+                // 设置篮球默认值
+                document.getElementById('max-fouls').value = 5;
+                document.getElementById('max-timeouts').value = 3;
+                break;
+            case 'football':
+                team1Default = "巴西队";
+                team2Default = "德国队";
+                if (!compactMode){
+                    compactModeToggle.click();
+                }
+                document.getElementById('max-fouls').value = 5;
+                document.getElementById('max-timeouts').value = 3;
+                break;
+            case 'volleyball':
+                team1Default = "中国队";
+                team2Default = "美国队";
+                if (!compactMode){
+                    compactModeToggle.click();
+                }
+                document.getElementById('max-fouls').value = 0;
+                document.getElementById('max-timeouts').value = 2;
+                break;
+            case 'tennis':
+                team1Default = "纳达尔";
+                team2Default = "费德勒";
+                if (!compactMode){
+                    compactModeToggle.click();
+                }
+                document.getElementById('max-fouls').value = 0;
+                document.getElementById('max-timeouts').value = 0;
+                break;
+            default:
+                team1Default = "主队";
+                team2Default = "客队";
+        }
+
+        if (sportType !== 'custom') {
+            team1Input.value = team1Default;
+            team2Input.value = team2Default;
+            updateTeamNames();
+        }
+    }
+
+    // 添加键盘快捷键支持
+    document.addEventListener('keydown', function(event) {
+        // 数字键1-3为队伍1加分
+        if (event.key >= '1' && event.key <= '3') {
+            const points = parseInt(event.key);
+            updateScore('1', points);
+            team1ScoreElement.classList.add('pulse');
+            setTimeout(() => {
+                team1ScoreElement.classList.remove('pulse');
+            }, 500);
+        }
+
+        // 数字键7-9为队伍2加分
+        if (event.key >= '7' && event.key <= '9') {
+            const points = parseInt(event.key) - 6; // 7->1, 8->2, 9->3
+            updateScore('2', points);
+            team2ScoreElement.classList.add('pulse');
+            setTimeout(() => {
+                team2ScoreElement.classList.remove('pulse');
+            }, 500);
+        }
+
+        // R键重置所有分数
+        if (event.key === 'r' || event.key === 'R') {
+            resetAll();
+        }
+
+        // H键显示/隐藏历史记录
+        if (event.key === 'h' || event.key === 'H') {
+            toggleHistoryPanel();
+        }
+
+        // C键切换精简模式
+        if (event.key === 'c' || event.key === 'C') {
+            toggleCompactMode();
+        }
+
+        // L键切换横屏模式
+        if (event.key === 'l' || event.key === 'L') {
+            toggleLandscapeMode();
+        }
+    });
+
+    // 自定义确认框函数
+    function showConfirm(title, message, confirmCallback, cancelCallback) {
+        const overlay = document.getElementById('confirm-overlay');
+        const confirmBox = document.getElementById('custom-confirm');
+        const titleElement = document.getElementById('confirm-title');
+        const messageElement = document.getElementById('confirm-message');
+        const okButton = document.getElementById('confirm-ok');
+        const cancelButton = document.getElementById('confirm-cancel');
+
+        // 设置标题和消息
+        titleElement.textContent = title;
+        messageElement.textContent = message;
+
+        // 显示确认框
+        overlay.classList.add('active');
+        setTimeout(() => {
+            confirmBox.classList.add('active');
+    }, 10);
+
+        // 创建Promise来处理用户选择
+        return new Promise((resolve) => {
+            // 确定按钮点击事件
+            const onConfirm = () => {
+            hideConfirm();
+        if (confirmCallback) confirmCallback();
+        resolve(true);
+    };
+
+        // 取消按钮点击事件
+        const onCancel = () => {
+            hideConfirm();
+            if (cancelCallback) cancelCallback();
+            resolve(false);
+        };
+
+        // 添加事件监听器
+        okButton.addEventListener('click', onConfirm, { once: true });
+        cancelButton.addEventListener('click', onCancel, { once: true });
+
+        // 点击遮罩层也可以取消
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+            onCancel();
+        }
+    }, { once: true });
+    });
+    }
+
+    // 隐藏确认框
+    function hideConfirm() {
+        const overlay = document.getElementById('confirm-overlay');
+        const confirmBox = document.getElementById('custom-confirm');
+
+        confirmBox.classList.remove('active');
+        setTimeout(() => {
+            overlay.classList.remove('active');
+    }, 300);
+    }
+</script>
+</body>
+</html>
