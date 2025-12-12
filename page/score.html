@@ -10,6 +10,8 @@
     <!--link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script-- src="https://code.jquery.com/jquery-3.6.0.min.js"></script-->
+    <link rel="stylesheet" href="../css/base.css">
+    <script src="../js/base.js"></script>
     <style>
         * {
             margin: 0;
@@ -955,176 +957,6 @@
                 flex-direction: column;
             }
         }
-        /*
-        @media (max-width: 768px) {
-            .scoreboard-container {
-                flex-direction: column;
-                align-items: center;
-            }
-
-            .team-scoreboard {
-                max-width: 100%;
-				width: auto;
-            }
-
-            .score-btn {
-                min-width: 65px;
-                padding: 10px 4px;
-            }
-
-            .score {
-                font-size: 4.5rem;
-                min-height: 110px;
-            }
-
-            h1 {
-                font-size: 2rem;
-            }
-
-            .global-btn {
-                min-width: 140px;
-                padding: 12px 15px;
-            }
-
-            .top-controls {
-                top: 10px;
-                right: 10px;
-                flex-direction: column;
-                gap: 8px;
-            }
-
-            .mode-toggle {
-                padding: 8px 14px;
-                font-size: 0.85rem;
-            }
-        }*/
-
-        /* 自定义确认框样式 */
-        .custom-confirm-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 10000;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.3s ease;
-        }
-
-        .custom-confirm-overlay.active {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        .custom-confirm {
-            background: linear-gradient(145deg, #222222, #111111);
-            border-radius: 10px;
-            padding: 30px;
-            width: 90%;
-            max-width: 450px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
-            border: 3px solid #333333;
-            position: relative;
-            transform: scale(0.7);
-            transition: transform 0.3s ease;
-            text-align: center;
-        }
-
-        .custom-confirm.active {
-            transform: scale(1);
-        }
-
-        .custom-confirm::before {
-            content: '';
-            position: absolute;
-            top: -2px;
-            left: -2px;
-            right: -2px;
-            bottom: -2px;
-            background: linear-gradient(45deg, #555555, #888888, #555555);
-            z-index: -1;
-            border-radius: 12px;
-        }
-
-        .confirm-icon {
-            font-size: 3rem;
-            color: #ffcc00;
-            margin-bottom: 15px;
-        }
-
-        .confirm-title {
-            font-size: 1.5rem;
-            color: #ffcc00;
-            margin-bottom: 15px;
-            font-weight: 600;
-        }
-
-        .confirm-message {
-            color: #cccccc;
-            margin-bottom: 25px;
-            line-height: 1.5;
-        }
-
-        .confirm-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-        }
-
-        .confirm-btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            min-width: 100px;
-        }
-
-        .confirm-btn.confirm {
-            background: linear-gradient(to bottom, #44aa44, #226622);
-            color: white;
-        }
-
-        .confirm-btn.confirm:hover {
-            background: linear-gradient(to bottom, #55bb55, #337733);
-            transform: translateY(-2px);
-        }
-
-        .confirm-btn.cancel {
-            background: linear-gradient(to bottom, #aa4444, #662222);
-            color: white;
-        }
-
-        .confirm-btn.cancel:hover {
-            background: linear-gradient(to bottom, #bb5555, #773333);
-            transform: translateY(-2px);
-        }
-
-        .pulse {
-            animation: pulse 0.5s ease-in-out;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
-
-        .blink {
-            animation: blink 1s infinite;
-        }
-
-        @keyframes blink {
-            0%, 50% { opacity: 1; }
-            51%, 100% { opacity: 0.5; }
-        }
     </style>
 </head>
 <body>
@@ -1408,18 +1240,8 @@
 </div>
 
 <!-- 自定义确认框 -->
-<div class="custom-confirm-overlay" id="confirm-overlay">
-    <div class="custom-confirm" id="custom-confirm">
-        <div class="confirm-icon">
-            <i class="fas fa-exclamation-circle"></i>
-        </div>
-        <h3 class="confirm-title" id="confirm-title">确认操作</h3>
-        <p class="confirm-message" id="confirm-message">您确定要执行此操作吗？</p>
-        <div class="confirm-buttons">
-            <button class="confirm-btn confirm" id="confirm-ok">确定</button>
-            <button class="confirm-btn cancel" id="confirm-cancel">取消</button>
-        </div>
-    </div>
+<div id="confirmDiv">
+
 </div>
 
 <script>
@@ -1476,6 +1298,9 @@
     $(document).ready(function() {
         // 初始化图表
         initScoreChart();
+
+        // 初始化确认框
+        initConfirmDiv($('#confirmDiv'));
 
         // 为所有按钮添加事件监听器
         $('.score-btn').on('click', handleScoreButtonClick);
@@ -2286,65 +2111,6 @@
             toggleLandscapeMode();
         }
     });
-
-    // 自定义确认框函数
-    function showConfirm(title, message, confirmCallback, cancelCallback) {
-        const $overlay = $('#confirm-overlay');
-        const $confirmBox = $('#custom-confirm');
-        const $titleElement = $('#confirm-title');
-        const $messageElement = $('#confirm-message');
-        const $okButton = $('#confirm-ok');
-        const $cancelButton = $('#confirm-cancel');
-
-        // 设置标题和消息
-        $titleElement.text(title);
-        $messageElement.text(message);
-
-        // 显示确认框
-        $overlay.addClass('active');
-        setTimeout(() => {
-            $confirmBox.addClass('active');
-    }, 10);
-
-        // 创建Promise来处理用户选择
-        return new Promise((resolve) => {
-            // 确定按钮点击事件
-            const onConfirm = () => {
-            hideConfirm();
-        if (confirmCallback) confirmCallback();
-        resolve(true);
-    };
-
-        // 取消按钮点击事件
-        const onCancel = () => {
-            hideConfirm();
-            if (cancelCallback) cancelCallback();
-            resolve(false);
-        };
-
-        // 添加事件监听器
-        $okButton.off('click').on('click', onConfirm);
-        $cancelButton.off('click').on('click', onCancel);
-
-        // 点击遮罩层也可以取消
-        $overlay.off('click').on('click', function(e) {
-            if (e.target === this) {
-                onCancel();
-            }
-        });
-    });
-    }
-
-    // 隐藏确认框
-    function hideConfirm() {
-        const $overlay = $('#confirm-overlay');
-        const $confirmBox = $('#custom-confirm');
-
-        $confirmBox.removeClass('active');
-        setTimeout(() => {
-            $overlay.removeClass('active');
-    }, 300);
-    }
 </script>
 </body>
 </html>
