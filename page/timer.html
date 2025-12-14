@@ -696,6 +696,7 @@
             border-color: rgba(251, 191, 36, 0.3);
         }
 
+        /* 修复：参与者标签样式优化 */
         .participant-tag {
             background: rgba(51, 65, 85, 0.95);
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -710,47 +711,54 @@
             backdrop-filter: blur(10px);
             position: relative;
             user-select: none;
-            touch-action: none;
             min-width: 100px;
+            max-width: 200px;
+        }
+
+        /* 修复：选中状态更明显 */
+        .participant-tag.selected {
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            border-color: rgba(251, 191, 36, 0.5);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+            transform: scale(1.02);
         }
 
         .participant-tag:hover {
             transform: translateY(-2px);
-            background: rgba(71, 85, 105, 0.9);
+            *background: rgba(71, 85, 105, 0.9);
+            opacity: 0.8;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         }
 
-        .participant-tag.selected {
-            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-            border-color: rgba(251, 191, 36, 0.3);
-        }
-
+        /* 修复：拖拽时样式 */
         .participant-tag.dragging {
-            opacity: 0.9;
-            transform: scale(1.02);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+            opacity: 0.7;
+            transform: scale(1.05);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
             z-index: 100;
-            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .participant-tag.ui-sortable-helper {
-            transform: scale(1.05);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        /* 修复：拖拽助手样式 */
+        .participant-tag.drag-helper {
+            transform: scale(1.08) rotate(2deg);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
             z-index: 10000 !important;
             opacity: 0.9;
         }
 
-        .ui-sortable-placeholder {
-            background: rgba(251, 191, 36, 0.15) !important;
-            border: 2px dashed rgba(251, 191, 36, 0.4) !important;
+        /* 修复：占位符样式 */
+        .drag-placeholder {
+            background: rgba(251, 191, 36, 0.2) !important;
+            border: 2px dashed rgba(251, 191, 36, 0.5) !important;
             border-radius: 20px;
-            visibility: visible !important;
             height: 40px !important;
-            margin: 5px 0;
+            margin: 5px;
+            min-width: 100px;
         }
 
+        /* 修复：拖拽手柄样式 */
         .drag-handle {
-            cursor: move;
+            cursor: grab;
             color: #94a3b8;
             font-size: 0.9rem;
             margin-right: 5px;
@@ -1529,6 +1537,10 @@
             font-size: 2.5rem;
             padding: 20px 30px;
         }
+
+        .hidden {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -1539,13 +1551,13 @@
 </div>
 
 <!-- 当前时间显示 -->
-<div class="current-time">
+<div class="current-time hidden">
     <i class="fas fa-clock"></i>
     <span id="current-time-display">00:00:00</span>
 </div>
 
 <!-- 全屏按钮 -->
-<button class="fullscreen-toggle" id="fullscreen-toggle">
+<button class="fullscreen-toggle hidden" id="fullscreen-toggle">
     <i class="fas fa-expand"></i>
     <span>全屏</span>
 </button>
@@ -1612,7 +1624,7 @@
 </div>
 
 <div class="container" id="main-container">
-    <header>
+    <header class="hidden">
         <h1><i class="fas fa-clock"></i> 多人计时器系统</h1>
         <p class="subtitle">支持多人成绩记录与历史查看的计时系统</p>
     </header>
@@ -1788,9 +1800,13 @@
             </button>
         </div>
 
+        <div class="participants-header">
+            <div class="participants-title">
+                <i class="fas fa-trophy"></i> 本局成绩记录
+            </div>
+        </div>
         <!-- 成绩表格区域 -->
         <div class="results-table-container">
-            <h3><i class="fas fa-trophy"></i> 本局成绩记录</h3>
             <table class="results-table" id="stopwatch-results-table">
                 <thead>
                 <tr>
@@ -1874,9 +1890,9 @@
         // 倒计时参与者管理
         let timerParticipants = [];
         let timerCurrentParticipantIndex = -1;
-        let timerParticipantResults = {}; // 所有历史成绩
-        let timerAllSessions = []; // 存储所有历史会话
-        let timerCurrentSessionResults = {}; // 当前局成绩（重置时会清空）
+        let timerParticipantResults = {};
+        let timerAllSessions = [];
+        let timerCurrentSessionResults = {};
 
         // 秒表模式相关变量
         let stopwatchInterval = null;
@@ -1887,21 +1903,21 @@
         // 秒表参与者管理
         let stopwatchParticipants = [];
         let stopwatchCurrentParticipantIndex = -1;
-        let stopwatchParticipantResults = {}; // 所有历史成绩
-        let stopwatchAllSessions = []; // 存储所有历史会话
-        let stopwatchCurrentSessionResults = {}; // 当前局成绩（重置时会清空）
+        let stopwatchParticipantResults = {};
+        let stopwatchAllSessions = [];
+        let stopwatchCurrentSessionResults = {};
 
         // 多人同时计时记录
         let multiLapRecords = [];
 
         // localStorage存储键名
         const STORAGE_KEYS = {
-            TIMER_PARTICIPANTS: 'multi_timer_participants_v9',
-            TIMER_RESULTS: 'multi_timer_results_v9',
-            TIMER_SESSIONS: 'multi_timer_sessions_v9',
-            STOPWATCH_PARTICIPANTS: 'multi_stopwatch_participants_v9',
-            STOPWATCH_RESULTS: 'multi_stopwatch_results_v9',
-            STOPWATCH_SESSIONS: 'multi_stopwatch_sessions_v9'
+            TIMER_PARTICIPANTS: 'multi_timer_participants_v10',
+            TIMER_RESULTS: 'multi_timer_results_v10',
+            TIMER_SESSIONS: 'multi_timer_sessions_v10',
+            STOPWATCH_PARTICIPANTS: 'multi_stopwatch_participants_v10',
+            STOPWATCH_RESULTS: 'multi_stopwatch_results_v10',
+            STOPWATCH_SESSIONS: 'multi_stopwatch_sessions_v10'
         };
 
         // 缓存jQuery对象
@@ -1957,7 +1973,7 @@
         const $timerModeBtn = $('#timer-mode-btn');
         const $stopwatchModeBtn = $('#stopwatch-mode-btn');
 
-        // ==================== 工具函数 ====================
+        // ============== 工具函数 ==============
 
         // localStorage操作函数
         function saveToStorage(key, value) {
@@ -1991,7 +2007,7 @@
         // 时间格式化函数
         function formatTimeFromSeconds(totalSeconds) {
             try {
-                if (typeof totalSeconds !== 'number' || isNaN(totalSeconds)) {
+                if (typeof totalSeconds != 'number' || isNaN(totalSeconds)) {
                     return "00:00.000";
                 }
 
@@ -2024,7 +2040,7 @@
 
         // 生成成绩HTML
         function generateTimesHTML(times) {
-            if (!times || times.length === 0) {
+            if (!times || times.length == 0) {
                 return '<span style="color: #94a3b8; font-style: italic;">暂无成绩</span>';
             }
 
@@ -2044,7 +2060,7 @@
 
         // 生成历史记录行的成绩HTML
         function generateHistoryTimesHTML(times) {
-            if (!times || times.length === 0) {
+            if (!times || times.length == 0) {
                 return '<span style="color: #94a3b8; font-style: italic;">无成绩</span>';
             }
 
@@ -2064,17 +2080,17 @@
 
         // 获取名次类
         function getRankClass(rank) {
-            if (rank === 1) return 'rank-1';
-            if (rank === 2) return 'rank-2';
-            if (rank === 3) return 'rank-3';
+            if (rank == 1) return 'rank-1';
+            if (rank == 2) return 'rank-2';
+            if (rank == 3) return 'rank-3';
             return 'rank-other';
         }
 
         // 获取圈数名次类
         function getLapRankClass(rank) {
-            if (rank === 1) return 'lap-rank-1';
-            if (rank === 2) return 'lap-rank-2';
-            if (rank === 3) return 'lap-rank-3';
+            if (rank == 1) return 'lap-rank-1';
+            if (rank == 2) return 'lap-rank-2';
+            if (rank == 3) return 'lap-rank-3';
             return '';
         }
 
@@ -2097,11 +2113,11 @@
             participantsWithTimes.sort((a, b) => a.bestTime - b.bestTime);
 
             // 查找名次
-            const rank = participantsWithTimes.findIndex(p => p.name === name) + 1;
+            const rank = participantsWithTimes.findIndex(p => p.name == name) + 1;
             return rank > 0 ? rank : null;
         }
 
-        // ==================== 数据管理函数 ====================
+        // ============== 数据管理函数 ==============
 
         // 保存数据到localStorage
         function saveTimerData() {
@@ -2133,7 +2149,7 @@
             // 处理倒计时参与者数据
             if (timerParticipantsData && Array.isArray(timerParticipantsData)) {
                 timerParticipants = timerParticipantsData.filter(name =>
-                    typeof name === 'string' && name.trim() !== ''
+                    typeof name == 'string' && name.trim() != ''
                 );
                 console.log("加载倒计时参与者:", timerParticipants);
             } else {
@@ -2141,7 +2157,7 @@
             }
 
             // 处理倒计时成绩数据
-            if (timerResultsData && typeof timerResultsData === 'object') {
+            if (timerResultsData && typeof timerResultsData == 'object') {
                 timerParticipantResults = timerResultsData;
             } else {
                 timerParticipantResults = {};
@@ -2157,7 +2173,7 @@
             // 处理秒表参与者数据
             if (stopwatchParticipantsData && Array.isArray(stopwatchParticipantsData)) {
                 stopwatchParticipants = stopwatchParticipantsData.filter(name =>
-                    typeof name === 'string' && name.trim() !== ''
+                    typeof name == 'string' && name.trim() != ''
                 );
                 console.log("加载秒表参与者:", stopwatchParticipants);
             } else {
@@ -2165,7 +2181,7 @@
             }
 
             // 处理秒表成绩数据
-            if (stopwatchResultsData && typeof stopwatchResultsData === 'object') {
+            if (stopwatchResultsData && typeof stopwatchResultsData == 'object') {
                 stopwatchParticipantResults = stopwatchResultsData;
             } else {
                 stopwatchParticipantResults = {};
@@ -2211,151 +2227,368 @@
             alert("系统已重置，请重新开始使用。");
         }
 
-        // ==================== 参与者管理函数 ====================
+        // ============== 简化的参与者管理函数 ==============
 
-        // 通用参与者添加函数
-        function addParticipant(participants, results, name, isTimer = true) {
-            if (!name || name.trim() === '') {
+        // 简化的参与者添加函数
+        function addParticipantSimple(name, isTimer = true) {
+            if (!name || name.trim() == '') {
                 alert('参与者姓名不能为空！');
                 return false;
             }
 
-            if (participants.includes(name)) {
-                alert('该参与者已存在！');
-                return false;
-            }
-
-            participants.push(name);
-
-            if (!results[name]) {
-                results[name] = {
-                    times: [],
-                    bestTime: null
-                };
+            if (isTimer) {
+                if (timerParticipants.includes(name)) {
+                    alert('该参与者已存在！');
+                    return false;
+                }
+                timerParticipants.push(name);
+                if (!timerParticipantResults[name]) {
+                    timerParticipantResults[name] = {
+                        times: [],
+                        bestTime: null
+                    };
+                }
+                timerCurrentParticipantIndex = timerParticipants.length - 1;
+                updateTimerParticipantsList();
+                saveTimerData();
+                updateTimerResultsTable();
+            } else {
+                if (stopwatchParticipants.includes(name)) {
+                    alert('该参与者已存在！');
+                    return false;
+                }
+                stopwatchParticipants.push(name);
+                if (!stopwatchParticipantResults[name]) {
+                    stopwatchParticipantResults[name] = {
+                        times: [],
+                        bestTime: null
+                    };
+                }
+                stopwatchCurrentParticipantIndex = stopwatchParticipants.length - 1;
+                updateStopwatchParticipantsList();
+                saveStopwatchData();
+                updateStopwatchResultsTable();
+                updateMultiLapTable();
             }
 
             return true;
         }
 
-        // 通用参与者移除函数
-        function removeParticipant(participants, results, currentIndex, name, isTimer = true) {
-            const index = participants.indexOf(name);
-            if (index > -1) {
-                participants.splice(index, 1);
-
-                // 更新当前索引
-                if (currentIndex >= participants.length) {
-                    currentIndex = participants.length - 1;
-                }
-
-                if (currentIndex === index) {
-                    currentIndex = participants.length > 0 ? 0 : -1;
-                } else if (currentIndex > index) {
-                    currentIndex--;
-                }
-
-                delete results[name];
-
-                return currentIndex;
+        // 简化的参与者移除函数
+        function removeParticipantSimple(name, isTimer = true) {
+            if (!confirm(`确定要移除参与者 "${name}" 吗？`)) {
+                return;
             }
-            return currentIndex;
+
+            if (isTimer) {
+                const index = timerParticipants.indexOf(name);
+                if (index > -1) {
+                    timerParticipants.splice(index, 1);
+
+                    // 调整当前选中的索引
+                    if (timerCurrentParticipantIndex > index) {
+                        timerCurrentParticipantIndex--;
+                    } else if (timerCurrentParticipantIndex == index) {
+                        timerCurrentParticipantIndex = timerParticipants.length > 0 ? 0 : -1;
+                    }
+
+                    delete timerParticipantResults[name];
+                    delete timerCurrentSessionResults[name];
+
+                    updateTimerParticipantsList();
+                    saveTimerData();
+                    updateTimerResultsTable();
+                }
+            } else {
+                const index = stopwatchParticipants.indexOf(name);
+                if (index > -1) {
+                    stopwatchParticipants.splice(index, 1);
+
+                    // 调整当前选中的索引
+                    if (stopwatchCurrentParticipantIndex > index) {
+                        stopwatchCurrentParticipantIndex--;
+                    } else if (stopwatchCurrentParticipantIndex == index) {
+                        stopwatchCurrentParticipantIndex = stopwatchParticipants.length > 0 ? 0 : -1;
+                    }
+
+                    delete stopwatchParticipantResults[name];
+                    delete stopwatchCurrentSessionResults[name];
+
+                    // 从多人计时记录中移除该参与者
+                    multiLapRecords = multiLapRecords.map(record => {
+                        if (record.participant == name) {
+                            return {...record, participant: null};
+                        }
+                        return record;
+                    });
+
+                    updateStopwatchParticipantsList();
+                    saveStopwatchData();
+                    updateStopwatchResultsTable();
+                    updateMultiLapTable();
+                }
+            }
         }
 
-        // 通用参与者列表更新函数
-        function updateParticipantsList($list, participants, currentIndex, isTimer = true) {
+        // 简化的参与者列表更新函数 - 修复拖拽和选择功能
+        function updateParticipantsListSimple($list, participants, currentIndex, isTimer = true) {
             try {
                 $list.empty();
 
+                if (participants.length == 0) {
+                    const $emptyMsg = $(`
+                        <div class="empty-message" style="padding: 15px; text-align: center; color: #64748b; font-style: italic;">
+                            <i class="fas fa-user-plus"></i>
+                            <p>暂无参与者，请添加参与者</p>
+                        </div>
+                    `);
+                    $list.append($emptyMsg);
+                    return;
+                }
+
                 participants.forEach((name, index) => {
-                    if (!name || typeof name !== 'string') return;
+                    if (!name || typeof name != 'string') return;
 
                     const $tag = $(`
-                        <div class="participant-tag ${currentIndex === index ? 'selected' : ''}">
+                        <div class="participant-tag ${currentIndex == index ? 'selected' : ''}"
+                             data-index="${index}"
+                             data-name="${name}">
                             <div class="drag-handle">
                                 <i class="fas fa-grip-vertical"></i>
                             </div>
-                            <span>${name}</span>
+                            <span class="participant-name">${name}</span>
                             <button class="remove-btn" data-name="${name}" title="移除">
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
                     `);
 
-                    $tag.find('.remove-btn').on('click', function(e) {
-                        e.stopPropagation();
-                        const participantName = $(this).data('name');
-                        if (confirm(`确定要移除参与者 "${participantName}" 吗？`)) {
-                            if (isTimer) {
-                                timerCurrentParticipantIndex = removeParticipant(
-                                    timerParticipants,
-                                    timerParticipantResults,
-                                    timerCurrentParticipantIndex,
-                                    participantName,
-                                    true
-                                );
-                                // 从当前局成绩中移除
-                                delete timerCurrentSessionResults[participantName];
-                                saveTimerData();
-                                updateTimerParticipantsList();
-                                updateTimerResultsTable();
-                            } else {
-                                stopwatchCurrentParticipantIndex = removeParticipant(
-                                    stopwatchParticipants,
-                                    stopwatchParticipantResults,
-                                    stopwatchCurrentParticipantIndex,
-                                    participantName,
-                                    false
-                                );
-                                // 从当前局成绩中移除
-                                delete stopwatchCurrentSessionResults[participantName];
-                                // 从多人同时计时记录中移除该参与者的关联
-                                multiLapRecords.forEach(record => {
-                                    if (record.participant === participantName) {
-                                        record.participant = null;
-                                    }
-                                });
-                                saveStopwatchData();
-                                updateStopwatchParticipantsList();
-                                updateStopwatchResultsTable();
-                                updateMultiLapTable();
-                            }
+                    // 1. 点击选择事件 - 确保不会与拖拽冲突
+                    $tag.off('click').on('click', function(e) {
+                        console.log('click ......');
+                        // 如果点击的是移除按钮，不执行选择操作
+                        if ($(e.target).closest('.remove-btn').length > 0) {
+                            return;
+                        }
+
+                        if (isTimer) {
+                            timerCurrentParticipantIndex = index;
+                            updateTimerParticipantsList();
+                            console.log("倒计时模式选中参与者:", name, "索引:", index);
+                        } else {
+                            stopwatchCurrentParticipantIndex = index;
+                            updateStopwatchParticipantsList();
+                            console.log("秒表模式选中参与者:", name, "索引:", index);
                         }
                     });
 
-                    $tag.on('click', function(e) {
-                        if (!$(e.target).hasClass('remove-btn') &&
-                            !$(e.target).parent().hasClass('remove-btn') &&
-                            !$(e.target).hasClass('fa-grip-vertical') &&
-                            !$(e.target).parent().hasClass('drag-handle')) {
-                            if (isTimer) {
-                                timerCurrentParticipantIndex = index;
-                                updateTimerParticipantsList();
-                            } else {
-                                stopwatchCurrentParticipantIndex = index;
-                                updateStopwatchParticipantsList();
-                            }
-                        }
+                    // 2. 移除按钮事件
+                    $tag.find('.remove-btn').off('click').on('click', function(e) {
+                        e.stopPropagation();
+                        const participantName = $(this).data('name');
+                        removeParticipantSimple(participantName, isTimer);
                     });
 
                     $list.append($tag);
                 });
 
-                if ($list.sortable('instance')) {
-                    $list.sortable('refresh');
-                }
+                // 3. 重新初始化拖拽功能
+                initSimpleDragAndDrop($list, isTimer);
+
             } catch (error) {
                 console.error("更新参与者列表失败:", error);
             }
         }
 
-        // ==================== 成绩表格更新函数 ====================
+        // 简化的拖拽实现
+        function initSimpleDragAndDrop($list, isTimer = true) {
+            let draggedItem = null;
+            let dragStartIndex = -1;
+
+            // 桌面端 - 使用原生HTML5拖拽API
+            $list.find('.participant-tag').each(function() {
+                const $item = $(this);
+                $item.attr('draggable', 'true');
+
+                // 拖拽开始
+                $item.off('dragstart').on('dragstart', function(e) {
+                    draggedItem = $item;
+                    dragStartIndex = $item.index();
+                    $item.addClass('dragging');
+                    e.originalEvent.dataTransfer.effectAllowed = 'move';
+                    e.originalEvent.dataTransfer.setData('text/plain', $item.data('index'));
+                });
+
+                // 拖拽结束
+                $item.off('dragend').on('dragend', function() {
+                    $item.removeClass('dragging');
+                    $list.find('.participant-tag').removeClass('drag-over');
+                    draggedItem = null;
+                    dragStartIndex = -1;
+                });
+
+                // 拖拽进入
+                $item.off('dragenter').on('dragenter', function(e) {
+                    e.preventDefault();
+                    if (draggedItem && !$item.is(draggedItem)) {
+                        $item.addClass('drag-over');
+                    }
+                });
+
+                // 拖拽离开
+                $item.off('dragleave').on('dragleave', function() {
+                    $item.removeClass('drag-over');
+                });
+
+                // 拖拽经过
+                $item.off('dragover').on('dragover', function(e) {
+                    e.preventDefault();
+                    e.originalEvent.dataTransfer.dropEffect = 'move';
+                });
+
+                // 放置
+                $item.off('drop').on('drop', function(e) {
+                    e.preventDefault();
+                    $item.removeClass('drag-over');
+
+                    if (draggedItem && !$item.is(draggedItem)) {
+                        const dragEndIndex = $item.index();
+
+                        // 移动元素
+                        if (dragEndIndex < dragStartIndex) {
+                            draggedItem.insertBefore($item);
+                        } else {
+                            draggedItem.insertAfter($item);
+                        }
+
+                        // 更新数据
+                        updateParticipantsOrder($list, isTimer);
+                    }
+                });
+            });
+
+            // 移动端 - 使用触摸事件
+            let touchStartX = 0;
+            let touchStartY = 0;
+            let touchStartOffsetX = 0;
+            let touchStartOffsetY = 0;
+            let touchStartItem = null;
+            let touchStartIndex = -1;
+
+            $list.off('touchstart').on('touchstart', '.participant-tag', function(e) {
+                const touch = e.originalEvent.touches[0];
+                touchStartX = touch.pageX;
+                touchStartY = touch.pageY;
+                touchStartOffsetX = $(this).offset().left;
+                touchStartOffsetY = $(this).offset().top;
+                touchStartItem = $(this);
+                touchStartIndex = touchStartItem.index();
+                touchStartItem.addClass('dragging');
+                //e.preventDefault();
+            });
+
+            $list.off('touchmove').on('touchmove', '.participant-tag', function(e) {
+                if (!touchStartItem) return;
+
+                const touch = e.originalEvent.touches[0];
+                const deltaX = touch.pageX - touchStartX;
+                const deltaY = touch.pageY - touchStartY;
+
+                // 移动元素
+                touchStartItem.css('transform', `translate(${deltaX - (touchStartItem.offset().left - touchStartOffsetX)}px, ${deltaY - (touchStartItem.offset().top - touchStartOffsetY)}px)`);
+
+                // 检测是否需要交换位置
+                const items = $list.find('.participant-tag').not(touchStartItem);
+                let newIndex = touchStartIndex;
+
+                items.each(function(index) {
+                    const $item = $(this);
+                    const itemTop = $item.offset().top;
+                    const itemLeft = $item.offset().left;
+                    const itemHeight = $item.outerHeight();
+                    const itemWidth = $item.outerWidth();
+                    //console.log(index,':',touch.pageY, itemTop, itemHeight, touch.pageX, itemLeft, itemWidth, touch);
+
+                    if (touch.pageY > itemTop + 1 && touch.pageY < itemTop + itemHeight - 1
+                        && touch.pageX > itemLeft + 1 && touch.pageX < itemLeft + itemWidth - 1) {
+                        newIndex = index + (index >= touchStartIndex ? 1 : 0);
+                        return true;
+                    }
+                });
+                //console.info(touchStartItem.offset().left);
+
+                // 交换位置
+                if (newIndex != touchStartIndex) {
+                    const targetItem = items.eq(newIndex > touchStartIndex ? newIndex - 1 : newIndex);
+                    if (newIndex > touchStartIndex) {
+                        touchStartItem.insertAfter(targetItem);
+                    } else {
+                        touchStartItem.insertBefore(targetItem);
+                    }
+                    touchStartIndex = newIndex;
+                }
+
+                //e.preventDefault();
+            });
+
+            $list.off('touchend touchcancel').on('touchend touchcancel', '.participant-tag', function(e) {
+                console.info('touch end')
+                if (touchStartItem) {
+                    touchStartItem.removeClass('dragging');
+                    touchStartItem.css('transform', '');
+
+                    // 更新数据
+                    updateParticipantsOrder($list, isTimer);
+
+                    touchStartItem = null;
+                    touchStartIndex = -1;
+                }
+                //e.preventDefault();
+            });
+        }
+
+        // 更新参与者顺序
+        function updateParticipantsOrder($list, isTimer = true) {
+            const newOrder = [];
+            $list.find('.participant-tag').each(function() {
+                const name = $(this).data('name');
+                if (name && name.trim() != '') {
+                    newOrder.push(name);
+                }
+            });
+
+            if (isTimer) {
+                timerParticipants = newOrder;
+                // 更新选中索引
+                timerCurrentParticipantIndex = newOrder.findIndex(name =>
+                    $list.find('.selected').data('name') == name
+                );
+                saveTimerData();
+                updateTimerResultsTable();
+                updateTimerParticipantsList();
+                console.log("倒计时参与者顺序更新:", timerParticipants);
+            } else {
+                stopwatchParticipants = newOrder;
+                // 更新选中索引
+                stopwatchCurrentParticipantIndex = newOrder.findIndex(name =>
+                    $list.find('.selected').data('name') == name
+                );
+                saveStopwatchData();
+                updateStopwatchResultsTable();
+                updateStopwatchParticipantsList();
+                updateMultiLapTable();
+                console.log("秒表参与者顺序更新:", stopwatchParticipants);
+            }
+        }
+
+        // ============== 成绩表格更新函数 ==============
 
         // 通用成绩表格更新函数 - 显示当前局成绩
         function updateResultsTable($body, $table, $emptyMsg, participants, results, currentIndex, sessionResults) {
             try {
                 $body.empty();
 
-                if (participants.length === 0) {
+                if (participants.length == 0) {
                     $emptyMsg.show();
                     $table.hide();
                     return;
@@ -2401,7 +2634,7 @@
                     const rankClass = getRankClass(rank);
 
                     const $row = $(`
-                        <tr ${currentIndex === index ? 'class="current-player"' : ''}>
+                        <tr ${currentIndex == index ? 'class="current-player"' : ''}>
                             <td class="rank-cell ${rankClass}">${rank}</td>
                             <td class="player-name">${name}</td>
                             <td class="time-entry">${generateTimesHTML(currentTimes)}</td>
@@ -2419,7 +2652,7 @@
             }
         }
 
-        // ==================== 倒计时模式函数 ====================
+        // ============== 倒计时模式函数 ==============
 
         function updateTimerFromInputs() {
             try {
@@ -2468,7 +2701,7 @@
         // 新增：更新固定时间显示函数
         function updateFixedTimeDisplay() {
             try {
-                if (currentMode === 'timer' && timerRunning) {
+                if (currentMode == 'timer' && timerRunning) {
                     if (timerTimeLeft < 0) timerTimeLeft = 0;
 
                     const hours = Math.floor(timerTimeLeft / 3600);
@@ -2487,7 +2720,7 @@
                     } else {
                         $fixedTimeDisplay.css('color', '#fbbf24');
                     }
-                } else if (currentMode === 'stopwatch' && stopwatchRunning) {
+                } else if (currentMode == 'stopwatch' && stopwatchRunning) {
                     const totalMilliseconds = stopwatchTime;
                     const hours = Math.floor(totalMilliseconds / 3600000);
                     const minutes = Math.floor((totalMilliseconds % 3600000) / 60000);
@@ -2511,12 +2744,12 @@
         }
 
         function startTimer() {
-            if (timerParticipants.length === 0) {
+            if (timerParticipants.length == 0) {
                 alert('请先添加至少一名参与者！');
                 return;
             }
 
-            if (timerCurrentParticipantIndex === -1) {
+            if (timerCurrentParticipantIndex == -1) {
                 timerCurrentParticipantIndex = 0;
                 updateTimerParticipantsList();
             }
@@ -2613,7 +2846,7 @@
 
                     timerParticipantResults[name].times.push(timeInSeconds);
 
-                    if (timerParticipantResults[name].bestTime === null || timeInSeconds < timerParticipantResults[name].bestTime) {
+                    if (timerParticipantResults[name].bestTime == null || timeInSeconds < timerParticipantResults[name].bestTime) {
                         timerParticipantResults[name].bestTime = timeInSeconds;
                     }
 
@@ -2697,7 +2930,7 @@
         }
 
         function nextTimerParticipant() {
-            if (timerParticipants.length === 0) {
+            if (timerParticipants.length == 0) {
                 alert('请先添加至少一名参与者！');
                 return;
             }
@@ -2720,7 +2953,7 @@
             }, 500);
         }
 
-        // ==================== 秒表模式函数 ====================
+        // ============== 秒表模式函数 ==============
 
         function updateStopwatchDisplay() {
             try {
@@ -2742,9 +2975,15 @@
         }
 
         function startStopwatch() {
-            if (stopwatchParticipants.length === 0) {
+            if (stopwatchParticipants.length == 0) {
                 alert('请先添加至少一名参与者！');
                 return;
+            }
+
+            // 修复：如果没有选中参与者，自动选中第一个
+            if (stopwatchCurrentParticipantIndex == -1) {
+                stopwatchCurrentParticipantIndex = 0;
+                updateStopwatchParticipantsList();
             }
 
             if (!stopwatchRunning) {
@@ -2812,6 +3051,12 @@
         }
 
         function recordStopwatchTime() {
+            // 修复：检查是否有选中的参与者
+            if (stopwatchCurrentParticipantIndex == -1) {
+                alert('请先选择参与者！点击参与者标签进行选择。');
+                return;
+            }
+
             if (stopwatchCurrentParticipantIndex >= 0 && stopwatchCurrentParticipantIndex < stopwatchParticipants.length) {
                 const name = stopwatchParticipants[stopwatchCurrentParticipantIndex];
                 const time = stopwatchTime;
@@ -2829,7 +3074,7 @@
 
                     stopwatchParticipantResults[name].times.push(timeInSeconds);
 
-                    if (stopwatchParticipantResults[name].bestTime === null || timeInSeconds < stopwatchParticipantResults[name].bestTime) {
+                    if (stopwatchParticipantResults[name].bestTime == null || timeInSeconds < stopwatchParticipantResults[name].bestTime) {
                         stopwatchParticipantResults[name].bestTime = timeInSeconds;
                     }
 
@@ -2878,7 +3123,7 @@
                     alert('请先开始计时！');
                 }
             } else {
-                alert('请先选择参与者！');
+                alert('请先选择参与者！点击参与者标签进行选择。');
             }
         }
 
@@ -2931,7 +3176,7 @@
             updateStopwatchResultsTable();
         }
 
-        // ==================== 多人同时计时函数 ====================
+        // ============== 多人同时计时函数 ==============
 
         function recordMultiLap() {
             if (stopwatchTime > 0) {
@@ -2958,7 +3203,7 @@
             try {
                 $multiLapBody.empty();
 
-                if (multiLapRecords.length === 0) {
+                if (multiLapRecords.length == 0) {
                     $multiLapEmptyMessage.show();
                     $multiLapTable.hide();
                     return;
@@ -2969,7 +3214,7 @@
 
                 let participantOptions = '<option value="">选择参与者</option>';
                 stopwatchParticipants.forEach(name => {
-                    if (name && typeof name === 'string') {
+                    if (name && typeof name == 'string') {
                         participantOptions += `<option value="${name}">${name}</option>`;
                     }
                 });
@@ -3026,7 +3271,7 @@
                 return;
             }
 
-            if (multiLapRecords.length === 0) {
+            if (multiLapRecords.length == 0) {
                 alert('没有可保存的成绩记录！');
                 return;
             }
@@ -3079,7 +3324,7 @@
         }
 
         function clearMultiLapRecords() {
-            if (multiLapRecords.length === 0) {
+            if (multiLapRecords.length == 0) {
                 return;
             }
 
@@ -3089,7 +3334,7 @@
             }
         }
 
-        // ==================== 历史记录函数 ====================
+        // ============== 历史记录函数 ==============
 
         function showTimerHistory() {
             showHistoryModal('timer');
@@ -3126,7 +3371,7 @@
             try {
                 $timerHistoryBody.empty();
 
-                if (timerAllSessions.length === 0) {
+                if (timerAllSessions.length == 0) {
                     $timerHistoryEmpty.show();
                     return;
                 }
@@ -3137,7 +3382,7 @@
                 const sortedSessions = [...timerAllSessions].sort((a, b) => b.timestamp - a.timestamp);
 
                 sortedSessions.forEach((session, sessionIndex) => {
-                    if (!session.results || Object.keys(session.results).length === 0) return;
+                    if (!session.results || Object.keys(session.results).length == 0) return;
 
                     // 获取当前局的所有参与者成绩
                     const sessionParticipants = Object.keys(session.results);
@@ -3180,7 +3425,7 @@
             try {
                 $stopwatchHistoryBody.empty();
 
-                if (stopwatchAllSessions.length === 0) {
+                if (stopwatchAllSessions.length == 0) {
                     $stopwatchHistoryEmpty.show();
                     return;
                 }
@@ -3191,7 +3436,7 @@
                 const sortedSessions = [...stopwatchAllSessions].sort((a, b) => b.timestamp - a.timestamp);
 
                 sortedSessions.forEach((session, sessionIndex) => {
-                    if (!session.results || Object.keys(session.results).length === 0) return;
+                    if (!session.results || Object.keys(session.results).length == 0) return;
 
                     // 获取当前局的所有参与者成绩
                     const sessionParticipants = Object.keys(session.results);
@@ -3230,14 +3475,14 @@
             }
         }
 
-        // ==================== UI更新函数 ====================
+        // ============== UI更新函数 ==============
 
         function updateTimerParticipantsList() {
-            updateParticipantsList($timerParticipantsList, timerParticipants, timerCurrentParticipantIndex, true);
+            updateParticipantsListSimple($timerParticipantsList, timerParticipants, timerCurrentParticipantIndex, true);
         }
 
         function updateStopwatchParticipantsList() {
-            updateParticipantsList($stopwatchParticipantsList, stopwatchParticipants, stopwatchCurrentParticipantIndex, false);
+            updateParticipantsListSimple($stopwatchParticipantsList, stopwatchParticipants, stopwatchCurrentParticipantIndex, false);
         }
 
         function updateTimerResultsTable() {
@@ -3264,101 +3509,7 @@
             }
         }
 
-        // ==================== 移动端拖拽支持 ====================
-        function initMobileDragAndDrop() {
-            console.log("初始化移动端拖拽支持...");
-
-            // 为参与者标签添加触摸事件支持
-            function setupTouchEvents($list, updateFunction) {
-                let touchStartY = 0;
-                let touchStartX = 0;
-                let draggedItem = null;
-                let draggedIndex = -1;
-
-                $list.on('touchstart', '.participant-tag', function(e) {
-                    const touch = e.originalEvent.touches[0];
-                    touchStartY = touch.clientY;
-                    touchStartX = touch.clientX;
-                    draggedItem = $(this);
-                    draggedIndex = draggedItem.index();
-
-                    // 添加拖动样式
-                    draggedItem.addClass('dragging');
-                    $list.addClass('sorting-active');
-
-                    // 防止页面滚动
-                    e.preventDefault();
-                });
-
-                $list.on('touchmove', '.participant-tag', function(e) {
-                    if (!draggedItem) return;
-
-                    const touch = e.originalEvent.touches[0];
-                    const deltaY = touch.clientY - touchStartY;
-                    const deltaX = touch.clientX - touchStartX;
-
-                    // 如果移动距离足够大，才开始拖拽
-                    if (Math.abs(deltaY) > 10 || Math.abs(deltaX) > 10) {
-                        // 移动元素
-                        draggedItem.css({
-                            'transform': `translate(${deltaX}px, ${deltaY}px)`,
-                            'z-index': '10000',
-                            'opacity': '0.8'
-                        });
-
-                        // 计算新的位置
-                        const items = $list.find('.participant-tag').not(draggedItem);
-                        let newIndex = draggedIndex;
-
-                        items.each(function(index) {
-                            const $item = $(this);
-                            const itemTop = $item.offset().top;
-                            const itemHeight = $item.outerHeight();
-
-                            if (touch.clientY > itemTop + itemHeight / 2) {
-                                newIndex = index + (index >= draggedIndex ? 1 : 0);
-                            }
-                        });
-
-                        // 更新位置
-                        if (newIndex !== draggedIndex) {
-                            if (newIndex > draggedIndex) {
-                                draggedItem.insertAfter(items.eq(newIndex - 1));
-                            } else {
-                                draggedItem.insertBefore(items.eq(newIndex));
-                            }
-                            draggedIndex = newIndex;
-                            updateFunction();
-                        }
-                    }
-
-                    e.preventDefault();
-                });
-
-                $list.on('touchend touchcancel', '.participant-tag', function(e) {
-                    if (draggedItem) {
-                        // 恢复样式
-                        draggedItem.removeClass('dragging').css({
-                            'transform': '',
-                            'z-index': '',
-                            'opacity': ''
-                        });
-                        $list.removeClass('sorting-active');
-
-                        // 更新顺序
-                        updateFunction();
-
-                        draggedItem = null;
-                    }
-                });
-            }
-
-            // 为两个参与者列表设置触摸事件
-            setupTouchEvents($timerParticipantsList, updateTimerParticipantsOrder);
-            setupTouchEvents($stopwatchParticipantsList, updateStopwatchParticipantsOrder);
-        }
-
-        // ==================== 事件处理函数 ====================
+        // ============== 事件处理函数 ==============
 
         function toggleFullscreenMode() {
             if (!isFullscreen) {
@@ -3446,162 +3597,22 @@
         function addTimerParticipantFromInput() {
             const name = $timerParticipantInput.val().trim();
             if (name) {
-                if (addParticipant(timerParticipants, timerParticipantResults, name, true)) {
-                    $timerParticipantInput.val('');
-                    $timerParticipantInput.focus();
-
-                    if (timerParticipants.length === 1) {
-                        timerCurrentParticipantIndex = 0;
-                        updateTimerParticipantsList();
-                    } else {
-                        updateTimerParticipantsList();
-                    }
-
-                    saveTimerData();
-                    updateTimerResultsTable();
-                }
+                addParticipantSimple(name, true);
+                $timerParticipantInput.val('');
+                $timerParticipantInput.focus();
             }
         }
 
         function addStopwatchParticipantFromInput() {
             const name = $stopwatchParticipantInput.val().trim();
             if (name) {
-                if (!name || name.trim() === '') {
-                    alert('参与者姓名不能为空！');
-                    return;
-                }
-
-                if (stopwatchParticipants.includes(name)) {
-                    alert('该参与者已存在！');
-                    return;
-                }
-
-                // 添加到参与者列表
-                stopwatchParticipants.push(name);
-
-                // 初始化成绩记录
-                if (!stopwatchParticipantResults[name]) {
-                    stopwatchParticipantResults[name] = {
-                        times: [],
-                        bestTime: null
-                    };
-                }
-
-                // 清空输入框
+                addParticipantSimple(name, false);
                 $stopwatchParticipantInput.val('');
                 $stopwatchParticipantInput.focus();
-
-                // 更新UI
-                updateStopwatchParticipantsList();
-
-                // 保存数据
-                saveStopwatchData();
-
-                // 更新成绩表格
-                updateStopwatchResultsTable();
-
-                // 更新多人计时表格
-                updateMultiLapTable();
             }
         }
 
-        function updateTimerParticipantsOrder() {
-            const newOrder = [];
-            $timerParticipantsList.find('.participant-tag').each(function() {
-                const name = $(this).find('span:first').text();
-                if (name && name.trim() !== '') {
-                    newOrder.push(name);
-                }
-            });
-
-            timerParticipants = newOrder;
-            saveTimerData();
-            updateTimerResultsTable();
-        }
-
-        function updateStopwatchParticipantsOrder() {
-            const newOrder = [];
-            $stopwatchParticipantsList.find('.participant-tag').each(function() {
-                const name = $(this).find('span:first').text();
-                if (name && name.trim() !== '') {
-                    newOrder.push(name);
-                }
-            });
-
-            stopwatchParticipants = newOrder;
-            saveStopwatchData();
-            updateStopwatchResultsTable();
-            updateMultiLapTable();
-        }
-
-        // ==================== 初始化函数 ====================
-
-        function initDragAndDrop() {
-            console.log("初始化拖拽功能...");
-
-            // 检查jQuery UI sortable是否可用
-            if ($.ui && $.ui.sortable) {
-                console.log("jQuery UI sortable可用，正在初始化拖拽...");
-
-                // 倒计时参与者列表拖拽
-                $timerParticipantsList.sortable({
-                    items: '.participant-tag',
-                    placeholder: 'ui-sortable-placeholder',
-                    cursor: 'move',
-                    opacity: 0.7,
-                    tolerance: 'pointer',
-                    delay: 150,
-                    start: function(event, ui) {
-                        ui.item.addClass('dragging');
-                        $(this).addClass('sorting-active');
-                        // 修复：设置占位符高度
-                        ui.placeholder.css({
-                            'height': ui.helper.outerHeight(),
-                            'width': ui.helper.outerWidth()
-                        });
-                    },
-                    stop: function(event, ui) {
-                        ui.item.removeClass('dragging');
-                        $(this).removeClass('sorting-active');
-                        updateTimerParticipantsOrder();
-                    },
-                    update: function(event, ui) {
-                        updateTimerParticipantsOrder();
-                    }
-                });
-
-                // 秒表参与者列表拖拽
-                $stopwatchParticipantsList.sortable({
-                    items: '.participant-tag',
-                    placeholder: 'ui-sortable-placeholder',
-                    cursor: 'move',
-                    opacity: 0.7,
-                    tolerance: 'pointer',
-                    delay: 150,
-                    start: function(event, ui) {
-                        ui.item.addClass('dragging');
-                        $(this).addClass('sorting-active');
-                        // 修复：设置占位符高度
-                        ui.placeholder.css({
-                            'height': ui.helper.outerHeight(),
-                            'width': ui.helper.outerWidth()
-                        });
-                    },
-                    stop: function(event, ui) {
-                        ui.item.removeClass('dragging');
-                        $(this).removeClass('sorting-active');
-                        updateStopwatchParticipantsOrder();
-                    },
-                    update: function(event, ui) {
-                        updateStopwatchParticipantsOrder();
-                    }
-                });
-
-                console.log("jQuery UI拖拽功能初始化完成");
-            } else {
-                console.warn("jQuery UI sortable不可用，将使用移动端拖拽");
-            }
-        }
+        // ============== 初始化函数 ==============
 
         function bindEvents() {
             console.log("绑定事件...");
@@ -3621,7 +3632,7 @@
 
             $timerAddParticipantBtn.on('click', addTimerParticipantFromInput);
             $timerParticipantInput.on('keypress', function(e) {
-                if (e.which === 13) addTimerParticipantFromInput();
+                if (e.which == 13) addTimerParticipantFromInput();
             });
 
             $stopwatchStartBtn.on('click', toggleStopwatch);
@@ -3632,7 +3643,7 @@
 
             $stopwatchAddParticipantBtn.on('click', addStopwatchParticipantFromInput);
             $stopwatchParticipantInput.on('keypress', function(e) {
-                if (e.which === 13) addStopwatchParticipantFromInput();
+                if (e.which == 13) addStopwatchParticipantFromInput();
             });
 
             $clearMultiLapBtn.on('click', clearMultiLapRecords);
@@ -3640,7 +3651,7 @@
 
             $historyModalClose.on('click', hideHistoryModal);
             $historyModal.on('click', function(e) {
-                if (e.target === this) hideHistoryModal();
+                if (e.target == this) hideHistoryModal();
             });
 
             $historyTabs.on('click', '.history-tab', function() {
@@ -3680,12 +3691,8 @@
                 resetStopwatch();
                 updateMultiLapTable();
 
-                // 初始化拖拽功能
-                initMobileDragAndDrop(); // 移动端拖拽
-                initDragAndDrop(); // jQuery UI拖拽（作为后备）
-
                 bindEvents();
-                switchToTimerMode();
+                switchToStopwatchMode();
                 updateTimerResultsTable();
                 updateStopwatchResultsTable();
 
