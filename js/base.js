@@ -15,8 +15,6 @@ function initConfirmDiv($this){
         '</div>');
 };
 
-
-
 // 自定义确认框函数
 function showConfirm(title, message, confirmCallback, cancelCallback) {
     var $overlay = $('#confirm-overlay');

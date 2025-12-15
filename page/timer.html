@@ -37,6 +37,34 @@
             transition: all 0.5s ease;
         }
 
+        /* 返回主页按钮 */
+        .back-to-home {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: linear-gradient(145deg, #4a5568, #2d3748);
+            border: none;
+            border-radius: 50px;
+            color: white;
+            cursor: pointer;
+            padding: 12px 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+
+        .back-to-home:hover {
+            background: linear-gradient(145deg, #5a6578, #3d4858);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+        }
+
         /* 当前时间显示 */
         .current-time {
             position: fixed;
@@ -69,7 +97,7 @@
             backdrop-filter: blur(20px);
             border-radius: 16px;
             padding: 15px 25px;
-            font-size: 1.8rem;
+            font-size: 2.8rem;
             font-weight: 700;
             text-align: center;
             color: #fbbf24;
@@ -105,7 +133,7 @@
             margin-bottom: 20px;
             width: 100%;
             padding: 15px;
-            margin-top: 60px;
+            *margin-top: 60px;
         }
 
         h1 {
@@ -303,6 +331,7 @@
 
         /* 大型开始按钮 */
         .start-btn {
+            width: 100%;
             background: linear-gradient(135deg, #10b981, #059669);
             border: none;
             border-radius: 12px;
@@ -1272,7 +1301,7 @@
             .start-btn {
                 padding: 16px 20px;
                 font-size: 1.1rem;
-                min-width: 140px;
+                min-width: 100%;
                 gap: 4px;
             }
 
@@ -1399,9 +1428,9 @@
                 gap: 6px;
             }
 
-            .start-btn, .control-btn {
+            .control-btn {
                 width: 100%;
-                min-width: 100%;
+                min-width: calc(50% - 15px);
             }
 
             .time-input {
@@ -1545,6 +1574,12 @@
 </head>
 <body>
 
+<!-- 返回主页按钮 -->
+<a href="javascript:history.back();" class="back-to-home">
+    <i class="fas fa-home"></i>
+    <span class="hidden">返回主页</span>
+</a>
+
 <!-- 固定时间显示 - 新增 -->
 <div class="fixed-time-display" id="fixed-time-display">
     00:10:00
@@ -1624,9 +1659,9 @@
 </div>
 
 <div class="container" id="main-container">
-    <header class="hidden">
-        <h1><i class="fas fa-clock"></i> 多人计时器系统</h1>
-        <p class="subtitle">支持多人成绩记录与历史查看的计时系统</p>
+    <header class="">
+        <h1><i class="fas fa-clock"></i> 计时</h1>
+        <p class="subtitle hidden">支持多人成绩记录与历史查看的计时系统</p>
     </header>
 
     <!-- 模式切换器 -->
@@ -1866,8 +1901,7 @@
     </div>
 
     <footer style="margin-top: 20px; text-align: center; color: #94a3b8; font-size: 0.85rem; padding: 12px; border-top: 1px solid rgba(255, 255, 255, 0.1); width: 100%;">
-        <p>© 2023 多人计时器系统 | 专业运动计时系统</p>
-        <p>支持多人成绩记录与历史查看，所有数据实时保存</p>
+        <p>© 运动家 | 比赛计时</p>
     </footer>
 </div>
 
@@ -2528,7 +2562,7 @@
                     touchStartIndex = newIndex;
                 }
 
-                //e.preventDefault();
+                e.preventDefault();
             });
 
             $list.off('touchend touchcancel').on('touchend touchcancel', '.participant-tag', function(e) {

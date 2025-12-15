@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>运动家 - 比分牌与计时器</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #4a6bff;
+            --secondary-color: #06d6a0;
+            --accent-color: #ff6b6b;
+            --background-color: #f8fafc;
+            --card-color: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+            --shadow-light: rgba(0, 0, 0, 0.05);
+            --shadow-medium: rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-primary);
+            line-height: 1.5;
+            overflow-x: hidden;
+        }
+
+        .app-container {
+            max-width: 100%;
+            min-height: 100vh;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 顶部导航栏 */
+        .app-header {
+            background-color: var(--card-color);
+            padding: 16px 20px;
+            box-shadow: 0 2px 10px var(--shadow-light);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+        }
+
+        .logo-icon i {
+            font-size: 22px;
+            color: white;
+        }
+
+        .logo-text {
+            font-size: 22px;
+            font-weight: 700;
+            background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .user-profile {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--background-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary-color);
+        }
+
+        /* 主要内容区域 */
+        .main-content {
+            flex: 1;
+            padding: 20px 20px 30px;
+        }
+
+        .welcome-section {
+            margin-bottom: 30px;
+        }
+
+        .welcome-section h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .welcome-section p {
+            font-size: 16px;
+            color: var(--text-secondary);
+        }
+
+        /* 核心功能区域 */
+        .core-features {
+            margin-bottom: 40px;
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+        }
+
+        .section-title i {
+            margin-right: 10px;
+            color: var(--primary-color);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        .feature-card {
+            background-color: var(--card-color);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 5px 15px var(--shadow-light);
+            transition: all 0.3s ease;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .feature-card:active {
+            transform: scale(0.98);
+        }
+
+        .feature-card.large {
+            grid-column: 1;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .card-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 16px;
+        }
+
+        .scoreboard .card-icon {
+            background: linear-gradient(135deg, #4a6bff, #6a8cff);
+        }
+
+        .timer .card-icon {
+            background: linear-gradient(135deg, #06d6a0, #07e5ab);
+        }
+
+        .card-icon i {
+            font-size: 28px;
+            color: white;
+        }
+
+        .card-title {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .card-description {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-bottom: 20px;
+            flex-grow: 1;
+        }
+
+        .card-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 16px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+            flex: 1;
+            margin-right: 12px;
+        }
+
+        .btn-primary:active {
+            background-color: #3a5be0;
+            transform: translateY(2px);
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            color: var(--primary-color);
+            border: 1px solid var(--border-color);
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            padding: 0;
+        }
+
+        .btn-secondary:active {
+            background-color: var(--background-color);
+        }
+
+        /* 未来功能区域 */
+        .upcoming-features {
+            margin-bottom: 40px;
+        }
+
+        .upcoming-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+
+        .upcoming-card {
+            background-color: var(--card-color);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 3px 10px var(--shadow-light);
+            border: 1px solid var(--border-color);
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+
+        .upcoming-card:active {
+            transform: scale(0.97);
+        }
+
+        .upcoming-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 10px;
+            background-color: rgba(74, 107, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 12px;
+            color: var(--primary-color);
+        }
+
+        .upcoming-icon i {
+            font-size: 22px;
+        }
+
+        .upcoming-card h4 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .upcoming-card p {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .coming-soon {
+            display: inline-block;
+            background-color: rgba(255, 183, 77, 0.1);
+            color: #ff9800;
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 20px;
+            margin-top: 8px;
+        }
+
+        /* 底部导航栏 */
+        .bottom-nav {
+            background-color: var(--card-color);
+            padding: 16px 20px;
+            box-shadow: 0 -2px 10px var(--shadow-light);
+            position: sticky;
+            bottom: 0;
+            z-index: 100;
+        }
+
+        .nav-items {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-decoration: none;
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+            flex: 1;
+        }
+
+        .nav-item.active {
+            color: var(--primary-color);
+        }
+
+        .nav-item:active {
+            transform: scale(0.95);
+        }
+
+        .nav-icon {
+            font-size: 22px;
+            margin-bottom: 4px;
+        }
+
+        .nav-label {
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        /* 响应式调整 */
+        @media (min-width: 768px) {
+            .app-container {
+                max-width: 768px;
+                margin: 0 auto;
+                box-shadow: 0 0 30px var(--shadow-medium);
+            }
+
+            .features-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .upcoming-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .app-container {
+                max-width: 1024px;
+            }
+        }
+
+        /* 动画效果 */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .feature-card, .upcoming-card {
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        .feature-card.scoreboard {
+            animation-delay: 0.1s;
+        }
+
+        .feature-card.timer {
+            animation-delay: 0.2s;
+        }
+
+        /* 暗色模式支持 */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --background-color: #0f172a;
+                --card-color: #1e293b;
+                --text-primary: #f1f5f9;
+                --text-secondary: #94a3b8;
+                --border-color: #334155;
+                --shadow-light: rgba(0, 0, 0, 0.2);
+                --shadow-medium: rgba(0, 0, 0, 0.3);
+            }
+        }
+
+        /* 实用类 */
+        .hidden {
+            display: none !important;
+        }
+
+        .divider {
+            height: 1px;
+            background-color: var(--border-color);
+            margin: 24px 0;
+        }
+
+        .badge {
+            display: inline-block;
+            background-color: var(--accent-color);
+            color: white;
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <!-- 顶部导航栏 -->
+    <header class="app-header">
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-running"></i>
+                </div>
+                <div class="logo-text">运动家</div>
+            </div>
+            <div class="user-profile hidden">
+                <i class="fas fa-user"></i>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主要内容区域 -->
+    <main class="main-content">
+        <!-- 欢迎区域 -->
+        <section class="welcome-section hidden">
+            <h1>欢迎回来，运动家</h1>
+            <p>专业比分管理与计时工具，助您记录每一次精彩</p>
+        </section>
+
+        <!-- 核心功能区域 -->
+        <section class="core-features">
+            <h2 class="section-title"><i class="fas fa-star"></i> 核心功能</h2>
+            <div class="features-grid">
+                <!-- 比分牌功能卡片 -->
+                <div class="feature-card scoreboard large">
+                    <div class="card-header">
+                        <div class="card-icon">
+                            <i class="fas fa-futbol"></i>
+                        </div>
+                        <div>
+                            <h3 class="card-title">比分牌</h3>
+                            <div class="badge">实时更新</div>
+                        </div>
+                    </div>
+                    <p class="card-description">实时记录比赛比分，支持篮球、足球、排球等多种运动。自定义队伍名称、比赛规则，历史比分一目了然。</p>
+                    <div class="card-actions">
+                        <button class="btn btn-primary" id="open-scoreboard">
+                            <i class="fas fa-play-circle"></i>　开始使用
+                        </button>
+                        <button class="btn btn-secondary" id="scoreboard-info">
+                            <i class="fas fa-info"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 计时器功能卡片 -->
+                <div class="feature-card timer large">
+                    <div class="card-header">
+                        <div class="card-icon">
+                            <i class="fas fa-stopwatch"></i>
+                        </div>
+                        <div>
+                            <h3 class="card-title">计时器</h3>
+                            <div class="badge">精准计时</div>
+                        </div>
+                    </div>
+                    <p class="card-description">精准赛事计时工具，支持倒计时、正计时、分段计时。适用于训练、比赛等多种场景。</p>
+                    <div class="card-actions">
+                        <button class="btn btn-primary" id="open-timer">
+                            <i class="fas fa-play-circle"></i>　开始使用
+                        </button>
+                        <button class="btn btn-secondary" id="timer-info">
+                            <i class="fas fa-info"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="divider"></div>
+
+        <!-- 即将推出的功能 -->
+        <section class="upcoming-features">
+            <h2 class="section-title"><i class="fas fa-plus-circle"></i> 更多功能即将推出</h2>
+            <div class="upcoming-grid">
+                <div class="upcoming-card">
+                    <div class="upcoming-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h4>数据统计</h4>
+                    <p>比赛数据分析</p>
+                    <span class="coming-soon">即将推出</span>
+                </div>
+
+                <div class="upcoming-card">
+                    <div class="upcoming-icon">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
+                    <h4>赛事日程</h4>
+                    <p>安排比赛计划</p>
+                    <span class="coming-soon">即将推出</span>
+                </div>
+
+                <div class="upcoming-card">
+                    <div class="upcoming-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <h4>队伍管理</h4>
+                    <p>管理队员信息</p>
+                    <span class="coming-soon">即将推出</span>
+                </div>
+
+                <div class="upcoming-card">
+                    <div class="upcoming-icon">
+                        <i class="fas fa-trophy"></i>
+                    </div>
+                    <h4>成就系统</h4>
+                    <p>记录运动成就</p>
+                    <span class="coming-soon">即将推出</span>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 底部导航栏 -->
+    <nav class="bottom-nav hidden">
+        <div class="nav-items">
+            <a href="#" class="nav-item active">
+                <div class="nav-icon">
+                    <i class="fas fa-home"></i>
+                </div>
+                <div class="nav-label">首页</div>
+            </a>
+
+            <a href="#" class="nav-item">
+                <div class="nav-icon">
+                    <i class="fas fa-history"></i>
+                </div>
+                <div class="nav-label">历史</div>
+            </a>
+
+            <a href="#" class="nav-item">
+                <div class="nav-icon">
+                    <i class="fas fa-cog"></i>
+                </div>
+                <div class="nav-label">设置</div>
+            </a>
+
+            <a href="#" class="nav-item">
+                <div class="nav-icon">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="nav-label">我的</div>
+            </a>
+        </div>
+    </nav>
+</div>
+
+<!-- 功能提示模态框 -->
+<div id="info-modal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px;">
+    <div style="background-color: var(--card-color); border-radius: 16px; padding: 24px; max-width: 400px; width: 100%; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h3 style="font-size: 20px; font-weight: 600;" id="modal-title">功能说明</h3>
+            <button id="close-modal" style="background: none; border: none; color: var(--text-secondary); font-size: 20px; cursor: pointer;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <p style="color: var(--text-secondary); margin-bottom: 24px;" id="modal-content">功能说明内容</p>
+        <button id="modal-action-btn" class="btn btn-primary" style="width: 100%;">开始使用</button>
+    </div>
+</div>
+
+<script>
+    // 页面加载动画
+    document.addEventListener('DOMContentLoaded', function() {
+        // 设置初始动画状态
+        document.body.style.opacity = '0';
+        document.body.style.transition = 'opacity 0.3s ease';
+
+        // 触发动画
+        setTimeout(() => {
+            document.body.style.opacity = '1';
+        }, 50);
+
+        // 绑定功能卡片点击事件
+        const scoreboardCard = document.querySelector('.feature-card.scoreboard');
+        const timerCard = document.querySelector('.feature-card.timer');
+
+        scoreboardCard.addEventListener('click', function(e) {
+            if (!e.target.closest('.btn')) {
+                showFeatureInfo('scoreboard');
+            }
+        });
+
+        timerCard.addEventListener('click', function(e) {
+            if (!e.target.closest('.btn')) {
+                showFeatureInfo('timer');
+            }
+        });
+
+        // 绑定按钮点击事件
+        document.getElementById('open-scoreboard').addEventListener('click', function() {
+            openFeature('scoreboard');
+        });
+
+        document.getElementById('scoreboard-info').addEventListener('click', function(e) {
+            e.stopPropagation();
+            showFeatureInfo('scoreboard');
+        });
+
+        document.getElementById('open-timer').addEventListener('click', function() {
+            openFeature('timer');
+        });
+
+        document.getElementById('timer-info').addEventListener('click', function(e) {
+            e.stopPropagation();
+            showFeatureInfo('timer');
+        });
+
+        // 绑定模态框事件
+        document.getElementById('close-modal').addEventListener('click', closeModal);
+        document.getElementById('modal-action-btn').addEventListener('click', function() {
+            const currentFeature = this.getAttribute('data-feature');
+            closeModal();
+            openFeature(currentFeature);
+        });
+
+        // 点击模态框背景关闭
+        document.getElementById('info-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        // 绑定底部导航点击事件
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+                // 移除所有active类
+                document.querySelectorAll('.nav-item').forEach(nav => {
+                    nav.classList.remove('active');
+                });
+                // 添加active类到当前点击的项
+                this.classList.add('active');
+
+                // 如果是首页，平滑滚动到顶部
+                if (this.querySelector('.nav-icon i').classList.contains('fa-home')) {
+                    window.scrollTo({top: 0, behavior: 'smooth'});
+                } else {
+                    // 其他导航项可以在这里添加对应功能
+                    const navLabel = this.querySelector('.nav-label').textContent;
+                    showNotification(`即将跳转到${navLabel}页面`);
+                }
+            });
+        });
+
+        // 绑定用户头像点击事件
+        document.querySelector('.user-profile').addEventListener('click', function() {
+            showNotification('用户功能即将开放');
+        });
+    });
+
+    // 显示功能信息
+    function showFeatureInfo(feature) {
+        const modal = document.getElementById('info-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalContent = document.getElementById('modal-content');
+        const modalActionBtn = document.getElementById('modal-action-btn');
+
+        if (feature === 'scoreboard') {
+            modalTitle.textContent = '比分牌功能';
+            modalContent.textContent = '比分牌功能可以实时记录和显示比赛比分，支持多种运动类型。您可以自定义队伍名称、比赛规则，并查看历史比分记录。所有数据都会自动保存，方便您随时回顾。';
+            modalActionBtn.textContent = '开始记录比分';
+            modalActionBtn.setAttribute('data-feature', 'scoreboard');
+        } else if (feature === 'timer') {
+            modalTitle.textContent = '计时器功能';
+            modalContent.textContent = '计时器功能提供精准的赛事计时，支持倒计时、正计时和分段计时模式。适用于训练、比赛等多种场景，可以设置定时提醒，确保您不会错过任何重要时刻。';
+            modalActionBtn.textContent = '开始计时';
+            modalActionBtn.setAttribute('data-feature', 'timer');
+        }
+
+        modal.classList.remove('hidden');
+    }
+
+    // 关闭模态框
+    function closeModal() {
+        document.getElementById('info-modal').classList.add('hidden');
+    }
+
+    // 打开功能
+    function openFeature(feature) {
+        if (feature === 'scoreboard') {
+            showNotification('正在打开比分牌功能...');
+            // 在实际应用中，这里会跳转到比分牌页面
+            window.location.href = './page/score.html';
+        } else if (feature === 'timer') {
+            showNotification('正在打开计时器功能...');
+            // 在实际应用中，这里会跳转到计时器页面
+            window.location.href = './page/timer.html';
+        }
+    }
+
+    // 显示通知（模拟功能）
+    function showNotification(message) {
+        // 创建一个通知元素
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+                position: fixed;
+                top: 80px;
+                left: 50%;
+                transform: translateX(-50%) translateY(-20px);
+                background-color: var(--card-color);
+                color: var(--text-primary);
+                padding: 12px 24px;
+                border-radius: 12px;
+                box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+                z-index: 2000;
+                font-weight: 500;
+                opacity: 0;
+                transition: opacity 0.3s, transform 0.3s;
+                border: 1px solid var(--border-color);
+                max-width: 80%;
+                text-align: center;
+            `;
+        notification.textContent = message;
+
+        document.body.appendChild(notification);
+
+        // 显示通知
+        setTimeout(() => {
+            notification.style.opacity = '1';
+            notification.style.transform = 'translateX(-50%) translateY(0)';
+        }, 10);
+
+        // 3秒后隐藏并移除通知
+        setTimeout(() => {
+            notification.style.opacity = '0';
+            notification.style.transform = 'translateX(-50%) translateY(-20px)';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 300);
+        }, 3000);
+    }
+
+    // 添加卡片点击反馈
+    document.addEventListener('touchstart', function() {}, {passive: true});
+</script>
+</body>
+</html>

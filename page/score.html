@@ -41,6 +41,34 @@
             transition: all 0.5s ease;
         }
 
+        /* 返回主页按钮 */
+        .back-to-home {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: linear-gradient(145deg, #4a5568, #2d3748);
+            border: none;
+            border-radius: 50px;
+            color: white;
+            cursor: pointer;
+            padding: 12px 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+
+        .back-to-home:hover {
+            background: linear-gradient(145deg, #5a6578, #3d4858);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+        }
+
         /* 当前时间显示 */
         .current-time {
             position: fixed;
@@ -106,7 +134,7 @@
         .compact-mode .chart-panel,
         .compact-mode .team-stats,
         .compact-mode .foul-controls,
-        .compact-mode .match-info-item:nth-child(n+4) {
+        .compact-mode .compact-item {
             display: none !important;
         }
 
@@ -957,17 +985,53 @@
                 flex-direction: column;
             }
         }
+
+        /* 自动保存提示 */
+        .auto-save-indicator {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: linear-gradient(145deg, #225522, #113311);
+            border-radius: 50px;
+            padding: 8px 16px;
+            font-size: 0.8rem;
+            color: #aaffaa;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            pointer-events: none;
+        }
+
+        .auto-save-indicator.show {
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
 
+<!-- 返回主页按钮 -->
+<a href="javascript:history.back();" class="back-to-home">
+    <i class="fas fa-home"></i>
+    <span class="hidden">返回主页</span>
+</a>
+
+<!-- 自动保存提示 -->
+<div class="auto-save-indicator" id="auto-save-indicator">
+    <i class="fas fa-save"></i>
+    <span>数据已保存</span>
+</div>
+
 <div class="container" id="main-container">
     <header>
         <div class="logo">
-            <i class="fas fa-trophy"> 比分记录</i>
+            <i class="fas fa-trophy" id="match-name"> 比分记录</i>
 
             <!-- 当前时间显示 -->
-            <div class="current-time" style="zoom:0.7;">
+            <div class="current-time" id="current-time" style="zoom:0.7;display: none;">
                 <i class="fas fa-clock"></i>
                 <span id="current-time-display">00:00:00</span>
             </div>
@@ -1137,6 +1201,13 @@
                             </label>
                         </div>
                         <div class="mode-control">
+                            <span class="mode-label">显示时间</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="time-mode-toggle">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="mode-control">
                             <span class="mode-label">横屏模式</span>
                             <label class="toggle-switch">
                                 <input type="checkbox" id="landscape-mode-toggle">
@@ -1152,7 +1223,7 @@
                         </div>
                     </div>
 
-                    <div class="match-period">
+                    <div class="match-period compact-item">
                         <div class="period-label">当前节次：</div>
                         <div class="period-controls">
                             <button class="period-btn active" data-period="1">第1节</button>
@@ -1164,7 +1235,7 @@
                     </div>
 
                     <div class="match-info">
-                        <div class="match-info-item">
+                        <div class="match-info-item hidden">
                             <label for="sport-type">比赛类型：</label>
                             <select id="sport-type">
                                 <option value="basketball">篮球</option>
@@ -1175,6 +1246,10 @@
                             </select>
                         </div>
                         <div class="match-info-item">
+                            <label for="team1-input">比赛名称：</label>
+                            <input type="text" id="match-name-input" value="比分记录" maxlength="30">
+                        </div>
+                        <div class="match-info-item">
                             <label for="team1-input">主队名称：</label>
                             <input type="text" id="team1-input" value="主队" maxlength="20">
                         </div>
@@ -1182,11 +1257,11 @@
                             <label for="team2-input">客队名称：</label>
                             <input type="text" id="team2-input" value="客队" maxlength="20">
                         </div>
-                        <div class="match-info-item">
+                        <div class="match-info-item compact-item">
                             <label for="max-fouls">犯规上限：</label>
                             <input type="number" id="max-fouls" min="0" max="50" value="5">
                         </div>
-                        <div class="match-info-item">
+                        <div class="match-info-item compact-item">
                             <label for="max-timeouts">暂停上限：</label>
                             <input type="number" id="max-timeouts" min="0" max="20" value="3">
                         </div>
@@ -1203,6 +1278,10 @@
                         <button class="global-btn export-btn" id="export-data">
                             <i class="fas fa-download"></i>
                             导出数据
+                        </button>
+                        <button class="global-btn" id="clear-storage" style="background: linear-gradient(to bottom, #774477, #552255);">
+                            <i class="fas fa-trash-alt"></i>
+                            清除保存
                         </button>
                     </div>
                 </div>
@@ -1234,8 +1313,7 @@
     </div>
 
     <footer>
-        <p>© 2023 真实比分记录板 | 专业运动比赛比分记录系统</p>
-        <p>模拟真实体育比分牌设计，专为比赛场景优化</p>
+        <p>© 运动家 | 比赛比分记录</p>
     </footer>
 </div>
 
@@ -1263,9 +1341,12 @@
     };
     let isFullscreen = false;
     let compactMode = false;
+    let timeMode = false;
     let landscapeMode = false;
+    let autoSaveTimeout = null;
 
     // 使用jQuery缓存DOM元素
+    const $currentTimeDivElement = $('#current-time');
     const $currentTimeElement = $('#current-time-display');
     const $fullscreenToggle = $('#fullscreen-toggle');
     const $team1ScoreElement = $('#team1-score');
@@ -1274,8 +1355,10 @@
     const $team2FoulsElement = $('#team2-fouls');
     const $team1TimeoutsElement = $('#team1-timeouts');
     const $team2TimeoutsElement = $('#team2-timeouts');
+    const $matchNameElement = $('#match-name');
     const $team1NameElement = $('#team1-name');
     const $team2NameElement = $('#team2-name');
+    const $matchNameInput = $('#match-name-input');
     const $team1Input = $('#team1-input');
     const $team2Input = $('#team2-input');
     const $historyTeam1Element = $('#history-team1');
@@ -1291,15 +1374,21 @@
     const $compactToggle = $('#compact-toggle');
     const $landscapeToggle = $('#landscape-toggle');
     const $compactModeToggle = $('#compact-mode-toggle');
+    const $timeModeToggle = $('#time-mode-toggle');
     const $landscapeModeToggle = $('#landscape-mode-toggle');
     const $fullscreenModeToggle = $('#fullscreen-mode-toggle');
+    const $autoSaveIndicator = $('#auto-save-indicator');
+    const $clearStorageBtn = $('#clear-storage');
 
     // 初始化
     $(document).ready(function() {
+        // 从localStorage加载数据
+        loadFromLocalStorage();
+
         // 初始化图表
         initScoreChart();
 
-        // 初始化确认框
+        // 初始化自定义确认框
         initConfirmDiv($('#confirmDiv'));
 
         // 为所有按钮添加事件监听器
@@ -1317,29 +1406,52 @@
         $('#show-history').on('click', toggleHistoryPanel);
         $('#export-data').on('click', exportDataCSV);
         $('#clear-history').on('click', clearHistoryBefore);
+        $clearStorageBtn.on('click', clearStorageBefore);
 
         // 队伍名称输入
-        $team1Input.on('input', updateTeamNames);
-        $team2Input.on('input', updateTeamNames);
+        $matchNameInput.on('input', function() {
+            updateMatchNames();
+            saveToLocalStorage();
+        });
+
+        // 队伍名称输入
+        $team1Input.on('input', function() {
+            updateTeamNames();
+            saveToLocalStorage();
+        });
+        $team2Input.on('input', function() {
+            updateTeamNames();
+            saveToLocalStorage();
+        });
+
+        // 运动类型选择
+        $sportTypeSelect.on('change', function() {
+            updateSportType();
+            saveToLocalStorage();
+        });
+
+        // 犯规和暂停上限输入
+        $maxFoulsInput.on('change', saveToLocalStorage);
+        $maxTimeoutsInput.on('change', saveToLocalStorage);
 
         // 全屏按钮
         $fullscreenToggle.on('click', toggleFullscreenMode);
-
-        // 运动类型选择
-        $sportTypeSelect.on('change', updateSportType);
 
         // 模式切换按钮
         $compactToggle.on('click', toggleCompactMode);
         $landscapeToggle.on('click', toggleLandscapeMode);
         $compactModeToggle.on('change', toggleCompactMode);
+        $timeModeToggle.on('change', toggleTimeMode);
         $landscapeModeToggle.on('change', toggleLandscapeMode);
         $fullscreenModeToggle.on('change', toggleFullscreenMode);
 
         // 更新历史表格中的队伍名称
         updateHistoryTeamNames();
 
-        // 添加初始历史记录
-        addHistoryEntry("比赛开始", 0, 0, 1);
+        // 添加初始历史记录（如果还没有记录）
+        if (scoreHistory.length === 0) {
+            addHistoryEntry("比赛开始", 0, 0, 1);
+        }
 
         // 启动时钟
         updateClock();
@@ -1347,7 +1459,189 @@
 
         // 监听全屏变化
         $(document).on('fullscreenchange webkitfullscreenchange mozfullscreenchange MSFullscreenChange', handleFullscreenChange);
+
+        // 页面关闭前自动保存
+        $(window).on('beforeunload', function() {
+            saveToLocalStorage();
+        });
+
+        // 定期自动保存（每30秒）
+        setInterval(saveToLocalStorage, 30000);
     });
+
+    // 保存数据到localStorage
+    function saveToLocalStorage() {
+        try {
+            const saveData = {
+                version: '1.0',
+                lastSaved: new Date().toISOString(),
+                team1Score: team1Score,
+                team2Score: team2Score,
+                team1Fouls: team1Fouls,
+                team2Fouls: team2Fouls,
+                team1Timeouts: team1Timeouts,
+                team2Timeouts: team2Timeouts,
+                currentPeriod: currentPeriod,
+                matchName: $matchNameInput.val(),
+                team1Name: $team1NameElement.text(),
+                team2Name: $team2NameElement.text(),
+                sportType: $sportTypeSelect.val(),
+                maxFouls: parseInt($maxFoulsInput.val()) || 5,
+                maxTimeouts: parseInt($maxTimeoutsInput.val()) || 3,
+                scoreHistory: scoreHistory,
+                chartData: chartData,
+                compactMode: compactMode,
+                timeMode: timeMode,
+                landscapeMode: landscapeMode
+            };
+
+            localStorage.setItem('scoreboardData', JSON.stringify(saveData));
+
+            // 显示保存提示
+            showAutoSaveIndicator();
+
+            console.log('数据已保存到localStorage');
+        } catch (error) {
+            console.error('保存数据到localStorage失败:', error);
+        }
+    }
+
+    // 从localStorage加载数据
+    function loadFromLocalStorage() {
+        try {
+            const savedData = localStorage.getItem('scoreboardData');
+            if (!savedData) {
+                console.log('没有找到保存的数据');
+                return;
+            }
+
+            const data = JSON.parse(savedData);
+
+            // 检查版本（如果需要未来兼容性）
+            if (data.version !== '1.0') {
+                console.log('数据版本不匹配，使用默认值');
+                return;
+            }
+
+            // 恢复数据
+            team1Score = data.team1Score || 0;
+            team2Score = data.team2Score || 0;
+            team1Fouls = data.team1Fouls || 0;
+            team2Fouls = data.team2Fouls || 0;
+            team1Timeouts = data.team1Timeouts || 0;
+            team2Timeouts = data.team2Timeouts || 0;
+            currentPeriod = data.currentPeriod || 1;
+
+            // 更新界面显示
+            $team1ScoreElement.text(team1Score);
+            $team2ScoreElement.text(team2Score);
+            $team1FoulsElement.text(team1Fouls);
+            $team2FoulsElement.text(team2Fouls);
+            $team1TimeoutsElement.text(team1Timeouts);
+            $team2TimeoutsElement.text(team2Timeouts);
+
+            // 恢复比赛名称
+            $matchNameInput.val(data.matchName || "比分记录");
+            updateMatchNames();
+
+            // 恢复队伍名称
+            $team1Input.val(data.team1Name || "主队");
+            $team2Input.val(data.team2Name || "客队");
+            updateTeamNames();
+
+            // 恢复运动类型
+            $sportTypeSelect.val(data.sportType || "basketball");
+
+            // 恢复设置
+            $maxFoulsInput.val(data.maxFouls || 5);
+            $maxTimeoutsInput.val(data.maxTimeouts || 3);
+
+            // 恢复历史记录
+            scoreHistory = data.scoreHistory || [];
+            updateHistoryTable();
+
+            // 恢复图表数据
+            chartData = data.chartData || {
+                labels: ["比赛开始"],
+                team1Scores: [0],
+                team2Scores: [0]
+            };
+
+            // 恢复模式设置
+            if (data.compactMode) {
+                toggleCompactMode();
+            }
+            if (data.timeMode) {
+                toggleTimeMode();
+            }
+            if (data.landscapeMode) {
+                toggleLandscapeMode();
+            }
+
+            // 恢复节次选择
+            $periodButtons.removeClass('active');
+            $(`.period-btn[data-period="${currentPeriod}"]`).addClass('active');
+
+            console.log('从localStorage加载数据成功');
+            addHistoryEntry("加载保存的数据", team1Score, team2Score, currentPeriod);
+        } catch (error) {
+            console.error('从localStorage加载数据失败:', error);
+        }
+    }
+
+    // 清除localStorage数据
+    function clearStorageBefore() {
+        showConfirm(
+            '清除保存的数据',
+            '您确定要清除所有保存到本地的数据吗？此操作将删除所有自动保存的比赛数据。',
+            function() {
+                clearStorage();
+            },
+            function() {
+                console.log('用户取消了清除操作');
+            }
+        );
+    }
+
+    function clearStorage() {
+        try {
+            localStorage.removeItem('scoreboardData');
+            addHistoryEntry("清除本地保存的数据", team1Score, team2Score, currentPeriod);
+
+            // 显示提示
+            $autoSaveIndicator
+                .html('<i class="fas fa-trash"></i><span>已清除保存的数据</span>')
+                .css('background', 'linear-gradient(145deg, #552222, #331111)')
+                .addClass('show');
+
+            setTimeout(() => {
+                $autoSaveIndicator.removeClass('show');
+            }, 2000);
+
+            console.log('localStorage数据已清除');
+        } catch (error) {
+            console.error('清除localStorage数据失败:', error);
+        }
+    }
+
+    // 显示自动保存提示
+    function showAutoSaveIndicator() {
+        // 清除之前的定时器
+        if (autoSaveTimeout) {
+            clearTimeout(autoSaveTimeout);
+        }
+
+        // 恢复默认样式
+        $autoSaveIndicator
+            .html('<i class="fas fa-save"></i><span>数据已保存</span>')
+            .css('background', 'linear-gradient(145deg, #225522, #113311)')
+            .addClass('show');
+
+        // 2秒后隐藏
+        autoSaveTimeout = setTimeout(() => {
+            $autoSaveIndicator.removeClass('show');
+        }, 2000);
+    }
 
     // 更新时钟显示
     function updateClock() {
@@ -1395,6 +1689,9 @@
             $fullscreenModeToggle.prop('checked', false);
             addHistoryEntry("退出全屏模式", team1Score, team2Score, currentPeriod);
         }
+
+        // 保存设置
+        saveToLocalStorage();
     }
 
     // 处理全屏变化
@@ -1436,7 +1733,10 @@
         $scoreElement.addClass('pulse');
         setTimeout(() => {
             $scoreElement.removeClass('pulse');
-    }, 500);
+        }, 500);
+
+        // 保存数据
+        saveToLocalStorage();
     }
 
     // 处理犯规按钮点击
@@ -1456,6 +1756,9 @@
                 updateFouls(team, -1);
             }
         }
+
+        // 保存数据
+        saveToLocalStorage();
     }
 
     // 更新分数
@@ -1556,6 +1859,7 @@
             '您确定要重置' + teamName + '分数吗？此操作将清除当前比分。',
             function() {
                 resetTeamScore(team);
+                saveToLocalStorage();
             },
             function() {
                 console.log('用户取消了重置操作');
@@ -1586,6 +1890,7 @@
             '您确定要重置所有数据吗？此操作将复位当前比赛所有数据。',
             function() {
                 resetAll();
+                saveToLocalStorage();
             },
             function() {
                 console.log('用户取消了重置操作');
@@ -1638,6 +1943,9 @@
         currentPeriod = period;
 
         addHistoryEntry(`切换到第${period === 'ot' ? '加时' : period}节`, team1Score, team2Score, period);
+
+        // 保存设置
+        saveToLocalStorage();
     }
 
     // 切换精简模式
@@ -1655,6 +1963,27 @@
             $compactModeToggle.prop('checked', false);
             addHistoryEntry("切换到标准模式", team1Score, team2Score, currentPeriod);
         }
+
+        // 保存设置
+        saveToLocalStorage();
+    }
+
+    // 切换时间显示
+    function toggleTimeMode() {
+        timeMode = !timeMode;
+
+        if (timeMode) {
+            $currentTimeDivElement.show();
+            $timeModeToggle.prop('checked', true);
+            addHistoryEntry("切换到显示时间", team1Score, team2Score, currentPeriod);
+        } else {
+            $currentTimeDivElement.hide();
+            $timeModeToggle.prop('checked', false);
+            addHistoryEntry("切换到隐藏时间", team1Score, team2Score, currentPeriod);
+        }
+
+        // 保存设置
+        saveToLocalStorage();
     }
 
     // 切换横屏模式
@@ -1672,6 +2001,9 @@
             $landscapeModeToggle.prop('checked', false);
             addHistoryEntry("切换到竖屏模式", team1Score, team2Score, currentPeriod);
         }
+
+        // 保存设置
+        saveToLocalStorage();
     }
 
     // 初始化比分趋势图表
@@ -1814,15 +2146,15 @@
         scoreHistory.forEach(entry => {
             const $row = $('<tr></tr>');
 
-        const $timeCell = $('<td></td>').text(entry.time);
-        const $periodCell = $('<td></td>').text(entry.period);
-        const $actionCell = $('<td></td>').text(entry.action);
-        const $score1Cell = $('<td></td>').text(entry.team1Score).css({color: '#ff3333', fontWeight: 'bold'});
-        const $score2Cell = $('<td></td>').text(entry.team2Score).css({color: '#3366ff', fontWeight: 'bold'});
+            const $timeCell = $('<td></td>').text(entry.time);
+            const $periodCell = $('<td></td>').text(entry.period);
+            const $actionCell = $('<td></td>').text(entry.action);
+            const $score1Cell = $('<td></td>').text(entry.team1Score).css({color: '#ff3333', fontWeight: 'bold'});
+            const $score2Cell = $('<td></td>').text(entry.team2Score).css({color: '#3366ff', fontWeight: 'bold'});
 
-        $row.append($timeCell, $periodCell, $actionCell, $score1Cell, $score2Cell);
-        $historyBody.append($row);
-    });
+            $row.append($timeCell, $periodCell, $actionCell, $score1Cell, $score2Cell);
+            $historyBody.append($row);
+        });
     }
 
     // 切换历史记录面板显示
@@ -1846,6 +2178,7 @@
             '您确定要清除所有历史记录吗？',
             function() {
                 clearHistory();
+                saveToLocalStorage();
             },
             function() {
                 console.log('用户取消了清除操作');
@@ -1947,11 +2280,11 @@
         data.history.forEach(entry => {
             // 处理CSV特殊字符（如逗号、引号、换行符）
             const safeTime = entry.time.replace(/"/g, '""');
-        const safePeriod = entry.period.replace(/"/g, '""');
-        const safeAction = entry.action.replace(/"/g, '""');
+            const safePeriod = entry.period.replace(/"/g, '""');
+            const safeAction = entry.action.replace(/"/g, '""');
 
-        csvContent += `"${safeTime}","${safePeriod}","${safeAction}",${entry.team1Score},${entry.team2Score}\n`;
-    });
+            csvContent += `"${safeTime}","${safePeriod}","${safeAction}",${entry.team1Score},${entry.team2Score}\n`;
+        });
 
         // 5. 添加一个空行
         csvContent += "\n";
@@ -1992,6 +2325,15 @@
         addHistoryEntry("导出比赛数据", team1Score, team2Score, currentPeriod);
 
         return csvContent;
+    }
+
+    // 更新比赛名称
+    function updateMatchNames() {
+        const matchName = $matchNameInput.val() || "比分记录";
+
+        $matchNameElement.text(" "+matchName);
+
+        addHistoryEntry(`比赛名称更新: ${matchName}`, team1Score, team2Score, currentPeriod);
     }
 
     // 更新队伍名称
@@ -2078,7 +2420,10 @@
             $team1ScoreElement.addClass('pulse');
             setTimeout(() => {
                 $team1ScoreElement.removeClass('pulse');
-        }, 500);
+            }, 500);
+
+            // 保存数据
+            saveToLocalStorage();
         }
 
         // 数字键7-9为队伍2加分
@@ -2088,12 +2433,16 @@
             $team2ScoreElement.addClass('pulse');
             setTimeout(() => {
                 $team2ScoreElement.removeClass('pulse');
-        }, 500);
+            }, 500);
+
+            // 保存数据
+            saveToLocalStorage();
         }
 
         // R键重置所有分数
         if (event.key === 'r' || event.key === 'R') {
             resetAll();
+            saveToLocalStorage();
         }
 
         // H键显示/隐藏历史记录
